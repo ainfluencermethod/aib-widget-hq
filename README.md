@@ -1,75 +1,76 @@
-# AIB Support Widget
+# AIB Widget HQ
 
-Embeddable AI customer-support chat widget, multi-client, powered by Claude.
-Backend: Supabase Edge Function `support-widget` on project `vbo-racun` (`fwynqfnrorhuixodnezs`).
-First client: **VBO dental** (invisalign.vbo.si), client id `vbo-dental`.
+Multi-brand AI customer-support widget platform.
 
-## Integrate on a client site
+- **Dashboard (login gated):** https://ainfluencermethod.github.io/aib-widget-hq/
+- **Backend:** Supabase project `vbo-racun` (`fwynqfnrorhuixodnezs`)
+- **Repo:** https://github.com/ainfluencermethod/aib-widget-hq
+- **First brand:** VBO dental (`vbo-dental`, invisalign.vbo.si)
 
-Add one line before `</body>`:
+## What it does
+
+| Piece | Purpose |
+|---|---|
+| `support-widget` edge function | Serves the embeddable widget.js per brand + answers chat via Claude + stores human-handoff requests |
+| `brand-setup` edge function | 1-click onboarding: reads a brand website, Claude writes the full widget config + knowledge base |
+| Dashboard (GitHub Pages) | Login gate (Supabase Auth), brand list, 1-click "Create with AI", settings editor, embed snippet, conversation logs, human requests inbox |
+| `widget_clients` table | Brand configs; new brand = new row, live in ≤1 min, no redeploy |
+| `widget_chat_logs` table | Every chat message per brand/session |
+| `widget_handoffs` table | "Talk to a human" requests (name, contact, message, open/done) |
+
+## Daily use
+
+1. Open the dashboard, sign in.
+2. **New brand** → enter name + website → *Create with AI*.
+3. Copy the embed snippet, give it to the client:
 
 ```html
-<script src="https://fwynqfnrorhuixodnezs.supabase.co/functions/v1/support-widget?client=vbo-dental" defer></script>
+<script src="https://fwynqfnrorhuixodnezs.supabase.co/functions/v1/support-widget?client=BRAND-SLUG" defer></script>
 ```
 
-That is all. The script injects the launcher bubble and the chat panel (shadow DOM, no CSS conflicts).
+4. Check *Conversations* and *Human requests* tabs per brand.
 
-## One-time setup (required before AI answers work)
+Test login (change or delete it): `demo@ainfluencerblueprint.com` / `AIB-widget-2026`.
+New team members: "Create one" on the login page (email confirmation required).
 
-Set the Anthropic API key as a Supabase secret. Until then the widget replies with a polite fallback (phone + email).
+## One-time setup still pending
 
-Dashboard: https://supabase.com/dashboard/project/fwynqfnrorhuixodnezs/settings/functions → add secret `ANTHROPIC_API_KEY`.
-
-Or CLI:
+Set the Anthropic API key (needed for AI answers and AI brand generation):
 
 ```bash
 supabase secrets set ANTHROPIC_API_KEY=sk-ant-... --project-ref fwynqfnrorhuixodnezs
 ```
 
-No redeploy needed after setting the secret.
+Or dashboard: https://supabase.com/dashboard/project/fwynqfnrorhuixodnezs/settings/functions
 
-## Architecture
+Until then: the widget answers with each brand's fallback message (with contact info), and brand setup uses a neutral template instead of AI-generated config. Human handoff works either way.
 
-| Piece | What it does |
-|---|---|
-| `GET /support-widget?client=<id>` | Serves `widget.js` with that client's config injected |
-| `POST /support-widget` | Chat endpoint; calls Claude with the client's system prompt |
-| `widget_chat_logs` table | Every user/assistant message pair, per client + session (RLS on, service-role only) |
+## Widget features
 
-Protection: client-id allowlist, per-client Origin allowlist, per-IP rate limit (30 req / 5 min), message length + history caps. Graceful fallback message on any API error.
+- Brand colors, language, greeting, quick replies — all from the DB config
+- "Talk to a human" link → contact form → lands in the dashboard's Human requests
+- Shadow DOM (no CSS conflicts), mobile full-screen, session memory
+- Protection: per-brand origin allowlist, per-IP rate limit, message caps, graceful fallbacks
 
-## Add a new client
+## Security model
 
-1. Edit `supabase/functions/support-widget/clients.ts` — copy the `vbo-dental` block.
-2. Fill in: name, model, `allowedOrigins`, widget texts (title, greeting, quick replies, colors), and the `systemPrompt` knowledge base.
-3. Redeploy the function (ask Claude, or `supabase functions deploy support-widget`).
-4. Give the client the one-line snippet with their `?client=<id>`.
+- Widget endpoints are public by design; brand slug + Origin allowlist + rate limit gate them.
+- Dashboard uses the public anon key; **RLS** restricts all data to signed-in users (owner or shared brands).
+- `brand-setup` requires a valid Supabase Auth JWT.
+- Chat logs and handoffs are writable only via service role (edge functions).
 
-## Edit the widget UI
+## Development
 
-1. Edit `widget.js`.
-2. Regenerate the embedded module:
+- Widget UI source: `widget.js`. After editing, regenerate + redeploy `support-widget`:
 
 ```bash
 cd vbo-support-widget && { printf 'export const WIDGET_JS = `'; sed -e 's/\\/\\\\/g' -e 's/`/\\`/g' -e 's/${/\\${/g' widget.js; printf '`;\n'; } > supabase/functions/support-widget/widget-src.ts
 ```
 
-3. Redeploy the function.
+- Dashboard source: `dashboard/` → copy to `docs/` and push to deploy (GitHub Pages serves `/docs`).
+- `supabase/functions/hq/` is an unused experiment (Supabase cannot serve HTML on the shared domain); ignore it.
+- Local demo page: `demo.html` (serve the folder on localhost:8080).
 
-## Test locally
+## Notes
 
-```bash
-cd "/Users/jarvis/Customer Support/vbo-support-widget" && python3 -m http.server 8080
-```
-
-Open http://localhost:8080/demo.html (localhost:8080 is in VBO's origin allowlist).
-
-## Read conversations
-
-```sql
-select created_at, session_id, role, content
-from widget_chat_logs
-where client_id = 'vbo-dental'
-order by created_at desc
-limit 100;
-```
+- Vercel deploy was blocked: the team role cannot create projects. GitHub Pages is used instead. To move to Vercel or a custom domain later, deploy `docs/` anywhere static; only the dashboard moves, the backend stays.
