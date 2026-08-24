@@ -167,5 +167,25 @@
       "otro"
     ],
     "maxChars": 700
+  },
+  {
+    "id": "retainer-maintenance-pointer",
+    "history": [],
+    "q": "Končal sem obravnavo. Kako naj vzdržujem zobe, da se ne premaknejo nazaj?",
+    "mustIncludeAny": [
+      "vbo-vzdrzevanje.si",
+      "retainer",
+      "Vivera"
+    ],
+    "maxChars": 800
+  },
+  {
+    "id": "scanner-itero",
+    "history": [],
+    "q": "S kakšnim skenerjem skenirate zobe?",
+    "mustInclude": [
+      "iTero"
+    ],
+    "maxChars": 600
   }
 ]
