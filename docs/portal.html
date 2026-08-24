@@ -161,6 +161,9 @@
       <div class="panelBox">
         <h2>Pogovor z obiskovalcem <span id="liveBadge" class="hidden"><span class="pulse"></span><span style="font-size:12.5px;color:var(--ok);font-weight:700">V ŽIVO</span></span></h2>
         <div class="chat" id="tdChat"><p class="note">Nalagam …</p></div>
+        <div class="note hidden" id="typingInd" style="margin-top:8px">
+          <span class="pulse" style="background:var(--warn)"></span>Obiskovalec tipka …
+        </div>
         <div class="row" style="margin-top:12px;gap:8px" id="liveStartRow">
           <button class="btn sm" id="liveStartBtn">💬 Prevzemi pogovor v živo</button>
           <span class="note">AI se izklopi; obiskovalec dobi vaša sporočila takoj, če ima stran še odprto.</span>
@@ -409,12 +412,19 @@ async function loadTranscript(sessionId, box) {
 let livePollTimer = null;
 function startLivePoll() {
   stopLivePoll();
-  livePollTimer = setInterval(() => {
-    if (currentTicket) loadTranscript(currentTicket.session_id, $("tdChat"));
+  livePollTimer = setInterval(async () => {
+    if (!currentTicket) return;
+    loadTranscript(currentTicket.session_id, $("tdChat"));
+    // visitor typing signal: fresh typing_at (last 6 s) shows the indicator
+    const { data } = await db.from("widget_handoffs")
+      .select("typing_at").eq("id", currentTicket.id).single();
+    const age = data?.typing_at ? Date.now() - new Date(data.typing_at).getTime() : Infinity;
+    $("typingInd").classList.toggle("hidden", age > 6000);
   }, 3000);
 }
 function stopLivePoll() {
   if (livePollTimer) { clearInterval(livePollTimer); livePollTimer = null; }
+  $("typingInd").classList.add("hidden");
 }
 
 function renderLive() {

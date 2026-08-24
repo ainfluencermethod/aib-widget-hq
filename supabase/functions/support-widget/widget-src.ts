@@ -334,6 +334,20 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
     setLiveUI(false);
   }
 
+  /* Tell the portal the visitor is typing (throttled; live chats only). */
+  var lastTypingPing = 0;
+  function pingTyping() {
+    if (!liveMode) return;
+    var now = Date.now();
+    if (now - lastTypingPing < 2500) return;
+    lastTypingPing = now;
+    fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'typing', client: CFG.clientId, session: sessionId() })
+    }).catch(function () {});
+  }
+
   function sync() {
     fetch(ENDPOINT + '?sync=1&client=' + encodeURIComponent(CFG.clientId) +
           '&session=' + encodeURIComponent(sessionId()) + '&after=' + lastMsgId)
@@ -543,6 +557,6 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   });
-  input.addEventListener('input', autoGrow);
+  input.addEventListener('input', function () { autoGrow(); pingTyping(); });
 })();
 `;

@@ -272,6 +272,24 @@ Deno.serve(async (req: Request) => {
     return json({ error: "origin not allowed" }, 403, origin);
   }
 
+  // ---------- typing ping (before the rate limiter: frequent but trivial) ----------
+  if (payload.type === "typing") {
+    const session = (payload.session ?? "").slice(0, 100);
+    if (session) {
+      try {
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/widget_handoffs?client_id=eq.${row.slug}&session_id=eq.${encodeURIComponent(session)}&live=is.true`,
+          {
+            method: "PATCH",
+            headers: { ...svcHeaders, "Prefer": "return=minimal" },
+            body: JSON.stringify({ typing_at: new Date().toISOString() }),
+          },
+        );
+      } catch (_e) { /* best effort */ }
+    }
+    return json({ ok: true }, 200, origin);
+  }
+
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
   if (rateLimited(ip)) {
     return json({ reply: errMsg(row) }, 429, origin);
