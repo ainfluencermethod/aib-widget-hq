@@ -12,7 +12,7 @@ Multi-brand AI customer-support widget platform.
 | Piece | Purpose |
 |---|---|
 | `support-widget` edge function | Serves the embeddable widget.js per brand + answers chat via Claude + stores human-handoff requests |
-| `brand-setup` edge function | 1-click onboarding: reads a brand website, Claude writes the full widget config + knowledge base |
+| `brand-setup` edge function | 1-click onboarding: scrapes the brand site (homepage + up to 8 key pages: prices, FAQ, contact, about, services), Claude writes the full widget config + knowledge base; also powers the "Rescan site" button; stores the raw scrape in `widget_clients.scraped_context` |
 | Dashboard (GitHub Pages) | Login gate (Supabase Auth), brand list, 1-click "Create with AI", settings editor, embed snippet, conversation logs, human requests inbox |
 | `widget_clients` table | Brand configs; new brand = new row, live in ≤1 min, no redeploy |
 | `widget_chat_logs` table | Every chat message per brand/session |
@@ -29,6 +29,7 @@ Multi-brand AI customer-support widget platform.
 ```
 
 4. Check *Conversations* and *Human requests* tabs per brand.
+5. When a client site changes (new prices, new offer): open the brand → **↻ Rescan site**. The AI re-scrapes and rebuilds the config. Warning: this overwrites manual edits. Rescan requires the `ANTHROPIC_API_KEY` secret.
 
 Test login (change or delete it): `demo@ainfluencerblueprint.com` / `AIB-widget-2026`.
 New team members: "Create one" on the login page (email confirmation required).
