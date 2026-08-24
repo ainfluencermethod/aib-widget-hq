@@ -218,32 +218,9 @@ async function generateConfig(name: string, website: string, corpus: string): Pr
   const instructions =
     `You configure an embeddable AI customer-support chat widget for the brand "${name}" (${website}).\n` +
     `Below is a scrape of the brand's website: the homepage HTML (use it for brand colors) plus the ` +
-    `text of its most important pages (prices, FAQ, contact, about, services). Read everything and ` +
-    `produce the widget configuration.\n\n` +
-    `Return ONLY a JSON object, no markdown fences, with exactly these keys:\n` +
-    `{\n` +
-    `  "language": "<primary site language code, e.g. en, sl, de>",\n` +
-    `  "widget": {\n` +
-    `    "title": "<short assistant name, in site language, e.g. 'Acme Assistant'>",\n` +
-    `    "subtitle": "<short reassurance line, site language>",\n` +
-    `    "avatar": "<one fitting emoji>",\n` +
-    `    "accent": "<main brand color as hex, from the HTML/styles; fallback #F97316>",\n` +
-    `    "accentDark": "<slightly darker variant of accent, hex>",\n` +
-    `    "greeting": "<warm 1-2 sentence opening message from the assistant, site language, may use one emoji>",\n` +
-    `    "placeholder": "<input placeholder like 'Write a message…', site language>",\n` +
-    `    "quickReplies": ["<3-4 questions visitors most likely ask, site language>"],\n` +
-    `    "errorMessage": "<apology + the brand's real contact (phone/email if found), site language>",\n` +
-    `    "powered": "<'AI assistant' translated to site language>",\n` +
-    `    "humanLabel": "<link text like '👤 I would rather talk to a human', site language>",\n` +
-    `    "humanIntro": "<one sentence: leave your contact info and the team will reach out, site language>",\n` +
-    `    "humanNamePh": "<placeholder 'Your name', site language>",\n` +
-    `    "humanContactPh": "<placeholder 'Phone or email (required)', site language>",\n` +
-    `    "humanMsgPh": "<placeholder 'How can we help?', site language>",\n` +
-    `    "humanSend": "<button text 'Send request', site language>",\n` +
-    `    "humanThanks": "<thank-you message incl. the brand's phone if found, site language>"\n` +
-    `  },\n` +
-    `  "system_prompt": "<full system prompt for the support AI, written in the site language>"\n` +
-    `}\n\n` +
+    `text of its most important pages (prices, FAQ, contact, about, services). Read everything, then ` +
+    `call save_widget_config with the complete configuration. All visitor-facing texts must be in the ` +
+    `site's primary language.\n\n` +
     `Rules for system_prompt: give the assistant a name and friendly persona; include a '## Facts' section with ` +
     `EVERY concrete fact found anywhere in the scrape (services, prices, offers, discounts, locations, ` +
     `phone numbers, emails, opening hours, guarantees, delivery/return policies, team members) — be exhaustive, ` +
@@ -253,6 +230,44 @@ async function generateConfig(name: string, website: string, corpus: string): Pr
     `language, and escalate to the brand's real contact channels when unsure; when the visitor asks for a human, ` +
     `point to the 'talk to a human' button below the chat. Only use facts that appear in the scrape.\n\n` +
     `WEBSITE SCRAPE:\n${corpus}`;
+
+  const configTool = {
+    name: "save_widget_config",
+    description: "Save the generated support-widget configuration for this brand.",
+    input_schema: {
+      type: "object",
+      required: ["language", "widget", "system_prompt"],
+      properties: {
+        language: { type: "string", description: "Primary site language code, e.g. en, sl, de" },
+        widget: {
+          type: "object",
+          required: ["title", "subtitle", "avatar", "accent", "accentDark", "greeting", "placeholder",
+            "quickReplies", "errorMessage", "powered", "humanLabel", "humanIntro", "humanNamePh",
+            "humanContactPh", "humanMsgPh", "humanSend", "humanThanks"],
+          properties: {
+            title: { type: "string", description: "Short assistant name in site language, e.g. 'Acme Assistant'" },
+            subtitle: { type: "string", description: "Short reassurance line ('we usually reply in seconds')" },
+            avatar: { type: "string", description: "One fitting emoji" },
+            accent: { type: "string", description: "Main brand color as hex from the HTML/styles; fallback #F97316" },
+            accentDark: { type: "string", description: "Slightly darker variant of accent, hex" },
+            greeting: { type: "string", description: "Warm 1-2 sentence opening message, may use one emoji" },
+            placeholder: { type: "string", description: "Input placeholder like 'Write a message…'" },
+            quickReplies: { type: "array", items: { type: "string" }, description: "3-4 questions visitors most likely ask" },
+            errorMessage: { type: "string", description: "Apology + the brand's real contact (phone/email if found)" },
+            powered: { type: "string", description: "'AI assistant' translated to site language" },
+            humanLabel: { type: "string", description: "Link text like '👤 I would rather talk to a human'" },
+            humanIntro: { type: "string", description: "One sentence: leave your contact info and the team will reach out" },
+            humanNamePh: { type: "string", description: "Placeholder 'Your name'" },
+            humanContactPh: { type: "string", description: "Placeholder 'Phone or email (required)'" },
+            humanMsgPh: { type: "string", description: "Placeholder 'How can we help?'" },
+            humanSend: { type: "string", description: "Button text 'Send request'" },
+            humanThanks: { type: "string", description: "Thank-you message incl. the brand's phone if found" },
+          },
+        },
+        system_prompt: { type: "string", description: "Full system prompt for the support AI, in site language" },
+      },
+    },
+  };
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -264,7 +279,9 @@ async function generateConfig(name: string, website: string, corpus: string): Pr
       },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 4000,
+        max_tokens: 5000,
+        tools: [configTool],
+        tool_choice: { type: "tool", name: "save_widget_config" },
         messages: [{ role: "user", content: instructions }],
       }),
     });
@@ -273,15 +290,12 @@ async function generateConfig(name: string, website: string, corpus: string): Pr
       return fallbackConfig(name, website);
     }
     const data = await res.json();
-    const text: string = (data.content ?? [])
-      .filter((b: { type: string }) => b.type === "text")
-      .map((b: { text: string }) => b.text)
-      .join("\n");
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start === -1 || end === -1) return fallbackConfig(name, website);
-    const parsed = JSON.parse(text.slice(start, end + 1));
-    if (!parsed.widget || !parsed.system_prompt) return fallbackConfig(name, website);
+    const call = (data.content ?? []).find((b: { type: string }) => b.type === "tool_use");
+    const parsed = call?.input;
+    if (!parsed || !parsed.widget || !parsed.system_prompt) {
+      console.error("generateConfig: no tool_use in response", JSON.stringify(data).slice(0, 500));
+      return fallbackConfig(name, website);
+    }
     return parsed as GeneratedConfig;
   } catch (e) {
     console.error("generateConfig error", e);
