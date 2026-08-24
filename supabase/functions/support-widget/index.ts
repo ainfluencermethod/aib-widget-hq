@@ -108,12 +108,12 @@ async function liveAgentFor(slug: string, session: string): Promise<string | nul
   }
 }
 
-async function logOne(clientId: string, session: string, page: string, role: string, content: string) {
+async function logOne(clientId: string, session: string, page: string, role: string, content: string, visitor = "") {
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/widget_chat_logs`, {
       method: "POST",
       headers: { ...svcHeaders, "Prefer": "return=minimal" },
-      body: JSON.stringify({ client_id: clientId, session_id: session, page, role, content }),
+      body: JSON.stringify({ client_id: clientId, session_id: session, page, role, content, visitor_id: visitor }),
     });
   } catch (_e) { /* logging must never break the chat */ }
 }
@@ -124,20 +124,16 @@ async function logChat(
   page: string,
   userMsg: string,
   botMsg: string,
+  visitor = "",
 ) {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/widget_chat_logs`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SERVICE_ROLE_KEY,
-        "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
-        "Prefer": "return=minimal",
-      },
+      headers: { ...svcHeaders, "Prefer": "return=minimal" },
       body: JSON.stringify([
-        { client_id: clientId, session_id: session, page, role: "user", content: userMsg },
-        { client_id: clientId, session_id: session, page, role: "assistant", content: botMsg },
+        { client_id: clientId, session_id: session, page, role: "user", content: userMsg, visitor_id: visitor },
+        { client_id: clientId, session_id: session, page, role: "assistant", content: botMsg, visitor_id: visitor },
       ]),
     });
   } catch (_e) {
@@ -173,6 +169,52 @@ Deno.serve(async (req: Request) => {
       status: 200,
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...corsHeaders(origin) },
     });
+  }
+
+  // ---------- GET ?history=1: previous chats of one visitor ----------
+  if (req.method === "GET" && url.searchParams.get("history") === "1") {
+    const slug = url.searchParams.get("client") ?? "";
+    const visitor = (url.searchParams.get("visitor") ?? "").slice(0, 100);
+    const row = await getBrand(slug);
+    if (!row || !visitor) return json({ error: "bad request" }, 400, origin);
+    const noStore = { "Content-Type": "application/json", "Cache-Control": "no-store", ...corsHeaders(origin) };
+    const session = url.searchParams.get("session");
+    try {
+      if (session) {
+        // ownership check: the session must contain rows of this visitor
+        const own = await fetch(
+          `${SUPABASE_URL}/rest/v1/widget_chat_logs?client_id=eq.${slug}&session_id=eq.${encodeURIComponent(session)}&visitor_id=eq.${encodeURIComponent(visitor)}&select=id&limit=1`,
+          { headers: svcHeaders },
+        );
+        const ownRows = own.ok ? await own.json() : [];
+        if (!ownRows.length) return new Response(JSON.stringify({ messages: [] }), { status: 200, headers: noStore });
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/widget_chat_logs?client_id=eq.${slug}&session_id=eq.${encodeURIComponent(session)}&select=id,role,content&order=id.asc&limit=200`,
+          { headers: svcHeaders },
+        );
+        const messages = res.ok ? await res.json() : [];
+        return new Response(JSON.stringify({ messages }), { status: 200, headers: noStore });
+      }
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/widget_chat_logs?client_id=eq.${slug}&visitor_id=eq.${encodeURIComponent(visitor)}&select=id,session_id,role,content,created_at&order=id.desc&limit=400`,
+        { headers: svcHeaders },
+      );
+      const rows: { id: number; session_id: string; role: string; content: string; created_at: string }[] =
+        res.ok ? await res.json() : [];
+      const map = new Map<string, { session: string; last: string; preview: string; count: number }>();
+      for (const r of rows) { // newest first; preview ends at the FIRST user message
+        let s = map.get(r.session_id);
+        if (!s) {
+          s = { session: r.session_id, last: r.created_at, preview: "", count: 0 };
+          map.set(r.session_id, s);
+        }
+        s.count++;
+        if (r.role === "user") s.preview = r.content;
+      }
+      return new Response(JSON.stringify({ sessions: [...map.values()].slice(0, 20) }), { status: 200, headers: noStore });
+    } catch (_e) {
+      return new Response(JSON.stringify({ sessions: [], messages: [] }), { status: 200, headers: noStore });
+    }
   }
 
   // ---------- GET: serve widget.js ----------
@@ -211,6 +253,7 @@ Deno.serve(async (req: Request) => {
     type?: string;
     client?: string;
     session?: string;
+    visitor?: string;
     page?: string;
     name?: string;
     contact?: string;
@@ -275,10 +318,11 @@ Deno.serve(async (req: Request) => {
   }
 
   // ---------- live takeover: a human agent answers, the AI stays silent ----------
+  const visitor = (payload.visitor ?? "").slice(0, 100);
   const liveAgent = await liveAgentFor(row.slug, payload.session ?? "");
   if (liveAgent !== null) {
     const userMsg = messages[messages.length - 1].content;
-    await logOne(row.slug, payload.session ?? "", payload.page ?? "", "user", userMsg);
+    await logOne(row.slug, payload.session ?? "", payload.page ?? "", "user", userMsg, visitor);
     return json({ live: true, agent: liveAgent }, 200, origin);
   }
 
@@ -317,7 +361,7 @@ Deno.serve(async (req: Request) => {
 
     const userMsg = messages[messages.length - 1].content;
     // fire-and-forget logging
-    logChat(row.slug, payload.session ?? "", payload.page ?? "", userMsg, reply);
+    logChat(row.slug, payload.session ?? "", payload.page ?? "", userMsg, reply, visitor);
 
     return json({ reply }, 200, origin);
   } catch (e) {

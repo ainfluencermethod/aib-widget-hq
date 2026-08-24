@@ -76,7 +76,12 @@
     '.quick{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 8px;background:#F8FAFC}' +
     '.quick button{border:1px solid ' + accent + ';color:' + accent + ';background:#fff;border-radius:999px;padding:7px 12px;font-size:13px;cursor:pointer}' +
     '.quick button:hover{background:' + accent + ';color:#fff}' +
-    '.human{padding:0 14px 8px;background:#F8FAFC}' +
+    '.human{display:flex;gap:16px;padding:0 14px 8px;background:#F8FAFC}' +
+    '.hl{display:flex;flex-direction:column}' +
+    '.hitem{display:block;width:100%;text-align:left;border:1px solid #E5E7EB;background:#F8FAFC;border-radius:8px;' +
+      'padding:8px 10px;font-size:13px;color:#1F2937;cursor:pointer;margin-top:6px;line-height:1.4}' +
+    '.hitem:hover{border-color:' + accent + '}' +
+    '.hitem b{color:' + accent + '}' +
     '.human button{border:none;background:none;color:#64748B;font-size:12.5px;cursor:pointer;text-decoration:underline;padding:2px}' +
     '.human button:hover{color:' + accent + '}' +
     '.hform{background:#fff;border:1px solid #E5E7EB;border-radius:14px;border-bottom-left-radius:4px;align-self:flex-start;' +
@@ -127,7 +132,8 @@
     '</div>' +
     '<div class="body" id="aib-body"></div>' +
     '<div class="quick" id="aib-quick"></div>' +
-    '<div class="human"><button id="aib-human">' + esc(CFG.humanLabel || 'Talk to a human') + '</button></div>' +
+    '<div class="human"><button id="aib-human">' + esc(CFG.humanLabel || 'Talk to a human') + '</button>' +
+    '<button id="aib-hist">' + esc(CFG.historyLabel || '🕘 Previous chats') + '</button></div>' +
     '<div class="foot">' +
       '<textarea id="aib-in" rows="1" placeholder="' + esc(CFG.placeholder || 'Write a message…') + '"></textarea>' +
       '<button id="aib-send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>' +
@@ -165,6 +171,7 @@
   function renderAll() {
     body.innerHTML = '';
     hformEl = null;
+    histEl = null;
     if (!messages.length && CFG.greeting) addBubble('assistant', CFG.greeting);
     for (var i = 0; i < messages.length; i++) addBubble(messages[i].role, messages[i].content);
     renderQuick();
@@ -207,6 +214,7 @@
     var payload = {
       client: CFG.clientId,
       session: sessionId(),
+      visitor: visitorId(),
       page: location.href,
       messages: messages.slice(-16)
     };
@@ -294,6 +302,73 @@
     } catch (e) { return 's_anonymous'; }
   }
 
+  /* persistent per-browser visitor id: ties old chats together across visits */
+  function visitorId() {
+    try {
+      var k = 'aib_vid_' + CFG.clientId;
+      var v = localStorage.getItem(k);
+      if (!v) {
+        v = 'v_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem(k, v);
+      }
+      return v;
+    } catch (e) { return 'v_anonymous'; }
+  }
+
+  /* ---------- previous chats ---------- */
+  var histEl = null;
+  function openHistory() {
+    if (histEl) { histEl.remove(); histEl = null; }
+    histEl = document.createElement('div');
+    histEl.className = 'hform';
+    histEl.innerHTML = '<div class="ht">' + esc(CFG.historyTitle || CFG.historyLabel || 'Previous chats') + '</div>' +
+      '<div class="hl">' + esc(CFG.historyLoading || '…') + '</div>';
+    body.appendChild(histEl);
+    body.scrollTop = body.scrollHeight;
+    var box = histEl.querySelector('.hl');
+    fetch(ENDPOINT + '?history=1&client=' + encodeURIComponent(CFG.clientId) +
+          '&visitor=' + encodeURIComponent(visitorId()))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var list = (data && data.sessions) || [];
+        var current = sessionId();
+        list = list.filter(function (s) { return s.session !== current; });
+        if (!list.length) { box.textContent = CFG.historyEmpty || 'No previous chats yet.'; return; }
+        box.innerHTML = '';
+        list.forEach(function (s) {
+          var b = document.createElement('button');
+          b.className = 'hitem';
+          b.innerHTML = '<b>' + esc(new Date(s.last).toLocaleString()) + '</b><br>' +
+            esc((s.preview || '').slice(0, 70));
+          b.onclick = function () { loadOldChat(s.session); };
+          box.appendChild(b);
+        });
+      })
+      .catch(function () { box.textContent = CFG.errorMessage || 'Could not load chats.'; });
+  }
+
+  function loadOldChat(sid) {
+    fetch(ENDPOINT + '?history=1&client=' + encodeURIComponent(CFG.clientId) +
+          '&visitor=' + encodeURIComponent(visitorId()) + '&session=' + encodeURIComponent(sid))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var msgs = (data && data.messages) || [];
+        if (!msgs.length) return;
+        messages = msgs.map(function (m) {
+          return { role: m.role === 'user' ? 'user' : 'assistant', content: m.content };
+        });
+        var maxId = 0;
+        msgs.forEach(function (m) { if (m.id > maxId) maxId = m.id; });
+        lastMsgId = maxId;
+        liveMode = false;
+        try { sessionStorage.setItem('aib_sid_' + CFG.clientId, sid); } catch (e) {}
+        persist();
+        persistLast();
+        renderAll();
+      })
+      .catch(function () {});
+  }
+
   function autoGrow() {
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 96) + 'px';
@@ -354,6 +429,7 @@
 
   /* ---------- events ---------- */
   panel.querySelector('#aib-human').onclick = openHumanForm;
+  panel.querySelector('#aib-hist').onclick = openHistory;
   panel.querySelector('#aib-new').onclick = function () {
     if (busy) return;
     messages = [];
