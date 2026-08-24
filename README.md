@@ -49,6 +49,7 @@ Until then: the widget answers with each brand's fallback message (with contact 
 ## Widget features
 
 - Brand colors, language, greeting, quick replies — all from the DB config
+- Mascot images: widget config keys `avatarUrl` (header) and `launcherUrl` (bubble); VBO uses the Zobko mascot (assets in `docs/assets/`, source kit: `~/Desktop/VBO - Dental/vbo-brand/assets/zobko/`)
 - "Talk to a human" link → contact form → lands in the dashboard's Human requests
 - Shadow DOM (no CSS conflicts), mobile full-screen, session memory
 - Protection: per-brand origin allowlist, per-IP rate limit, message caps, graceful fallbacks
