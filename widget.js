@@ -267,6 +267,37 @@
       });
   }
 
+  /* ---------- notification sound ---------- */
+  /* Browsers allow audio only after a user gesture; ensureAudio() runs on
+     clicks, chime() then plays a short two-tone ping for agent replies. */
+  var audioCtx = null;
+  function ensureAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) {}
+  }
+  function chime() {
+    if (CFG.soundOff) return;
+    try {
+      if (!audioCtx || audioCtx.state !== 'running') return;
+      var t = audioCtx.currentTime;
+      [880, 1174.66].forEach(function (f, i) {
+        var o = audioCtx.createOscillator();
+        var g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + i * 0.12);
+        g.gain.exponentialRampToValueAtTime(0.1, t + i * 0.12 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.12 + 0.35);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(t + i * 0.12);
+        o.stop(t + i * 0.12 + 0.4);
+      });
+    } catch (e) {}
+  }
+
   /* ---------- live takeover ---------- */
   /* While a human talks, the widget wears the human's identity: the header
      shows the verified staff name + a live pulse, and the AI extras
@@ -320,7 +351,7 @@
           addBubble('agent', m.content);
           added = true;
         });
-        if (added) { persist(); persistLast(); }
+        if (added) { persist(); persistLast(); chime(); }
       })
       .catch(function () {});
   }
@@ -491,6 +522,7 @@
     input.focus();
   };
   launcher.onclick = function () {
+    ensureAudio();
     open = !open;
     panel.classList.toggle('open', open);
     if (open) {
@@ -507,7 +539,7 @@
     panel.classList.remove('open');
     stopPoll();
   };
-  sendBtn.onclick = function () { send(); };
+  sendBtn.onclick = function () { ensureAudio(); send(); };
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   });
