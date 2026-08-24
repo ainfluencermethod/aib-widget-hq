@@ -41,13 +41,16 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
       'display:flex;align-items:center;justify-content:center;transition:transform .15s ease}' +
     '.launcher:hover{transform:scale(1.07)}' +
     '.launcher svg{width:28px;height:28px;fill:#fff}' +
+    '.launcher img{width:48px;height:48px;object-fit:contain;pointer-events:none}' +
     '.badge{position:absolute;top:-2px;right:-2px;width:16px;height:16px;border-radius:50%;background:#EF4444;border:2px solid #fff}' +
     '.panel{position:fixed;bottom:92px;right:20px;width:372px;max-width:calc(100vw - 24px);height:600px;max-height:calc(100vh - 120px);' +
       'background:#fff;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.28);display:none;flex-direction:column;overflow:hidden}' +
     '.panel.open{display:flex}' +
     '@media (max-width:480px){.panel{bottom:0;right:0;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0}}' +
     '.head{background:linear-gradient(135deg,' + accent + ',' + accent2 + ');color:#fff;padding:16px;display:flex;align-items:center;gap:12px}' +
-    '.head .av{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:20px;flex:0 0 auto}' +
+    '.head .av{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:20px;flex:0 0 auto;overflow:hidden}' +
+    '.head .av.pic{background:#FAF8F3}' +
+    '.head .av img{width:32px;height:32px;object-fit:contain}' +
     '.head .t{font-size:15px;font-weight:700;line-height:1.2}' +
     '.head .s{font-size:12px;opacity:.9;margin-top:2px}' +
     '.head .x{margin-left:auto;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px;line-height:1}' +
@@ -89,7 +92,9 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
   launcher.className = 'launcher';
   launcher.setAttribute('aria-label', CFG.title || 'Chat');
   launcher.innerHTML =
-    '<svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.9 2 11.7c0 2.7 1.4 5.1 3.7 6.7-.1 1-.6 2.5-1.6 3.6 0 0 2.9-.4 4.9-1.7 1 .3 2 .4 3 .4 5.5 0 10-3.9 10-8.7S17.5 3 12 3z"/></svg>' +
+    (CFG.launcherUrl
+      ? '<img src="' + esc(CFG.launcherUrl) + '" alt="">'
+      : '<svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.9 2 11.7c0 2.7 1.4 5.1 3.7 6.7-.1 1-.6 2.5-1.6 3.6 0 0 2.9-.4 4.9-1.7 1 .3 2 .4 3 .4 5.5 0 10-3.9 10-8.7S17.5 3 12 3z"/></svg>') +
     '<span class="badge" id="aib-badge"></span>';
   root.appendChild(launcher);
 
@@ -98,7 +103,9 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
   panel.className = 'panel';
   panel.innerHTML =
     '<div class="head">' +
-      '<div class="av">' + (CFG.avatar || '🦷') + '</div>' +
+      (CFG.avatarUrl
+        ? '<div class="av pic"><img src="' + esc(CFG.avatarUrl) + '" alt=""></div>'
+        : '<div class="av">' + (CFG.avatar || '🦷') + '</div>') +
       '<div><div class="t">' + esc(CFG.title || 'Chat') + '</div>' +
       '<div class="s">' + esc(CFG.subtitle || '') + '</div></div>' +
       '<button class="x" aria-label="Close">×</button>' +
