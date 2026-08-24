@@ -70,6 +70,8 @@
     '.body{flex:1;overflow-y:auto;padding:14px;background:#F8FAFC;display:flex;flex-direction:column;gap:8px}' +
     '.msg{max-width:85%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}' +
     '.msg.bot{background:#fff;color:#1F2937;border:1px solid #E5E7EB;border-bottom-left-radius:4px;align-self:flex-start}' +
+    '.who{display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#334155;margin-bottom:4px}' +
+    '.who svg{width:14px;height:14px;flex:0 0 auto}' +
     '.msg.user{background:' + accent + ';color:#fff;border-bottom-right-radius:4px;align-self:flex-end}' +
     '.msg a{color:' + accent + ';font-weight:600}' +
     '.msg.user a{color:#fff;text-decoration:underline}' +
@@ -160,10 +162,21 @@
     return out;
   }
 
+  /* blue verified seal (staff badge) */
+  var VERIFIED_SVG = '<svg viewBox="0 0 24 24" aria-label="verified"><path fill="#1D9BF0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"/><path fill="#fff" d="M10.54 16.2 6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z"/></svg>';
+
+  function staffDisplay() {
+    return CFG.staffName || liveAgent || 'Staff';
+  }
+
   function addBubble(role, text) {
     var d = document.createElement('div');
     d.className = 'msg ' + (role === 'user' ? 'user' : 'bot');
-    d.innerHTML = role === 'user' ? esc(text) : fmt(text);
+    if (role === 'agent') {
+      d.innerHTML = '<div class="who">' + esc(staffDisplay()) + VERIFIED_SVG + '</div>' + fmt(text);
+    } else {
+      d.innerHTML = role === 'user' ? esc(text) : fmt(text);
+    }
     body.appendChild(d);
     body.scrollTop = body.scrollHeight;
   }
@@ -253,7 +266,8 @@
     if (liveMode) return;
     liveMode = true;
     liveAgent = agent || '';
-    var note = (liveAgent ? liveAgent + ' ' : '') + (CFG.liveJoined || 'from our team joined the chat.');
+    var who = CFG.staffName || liveAgent;
+    var note = (who ? who + ' ' : '') + (CFG.liveJoined || 'from our team joined the chat.');
     messages.push({ role: 'assistant', content: note });
     persist();
     addBubble('assistant', note);
@@ -272,8 +286,8 @@
         msgs.forEach(function (m) {
           if (m.id <= lastMsgId) return;
           lastMsgId = m.id;
-          messages.push({ role: 'assistant', content: m.content });
-          addBubble('assistant', m.content);
+          messages.push({ role: 'agent', content: m.content });
+          addBubble('agent', m.content);
           added = true;
         });
         if (added) { persist(); persistLast(); }
@@ -355,7 +369,7 @@
         var msgs = (data && data.messages) || [];
         if (!msgs.length) return;
         messages = msgs.map(function (m) {
-          return { role: m.role === 'user' ? 'user' : 'assistant', content: m.content };
+          return { role: m.role === 'user' ? 'user' : (m.role === 'agent' ? 'agent' : 'assistant'), content: m.content };
         });
         var maxId = 0;
         msgs.forEach(function (m) { if (m.id > maxId) maxId = m.id; });
