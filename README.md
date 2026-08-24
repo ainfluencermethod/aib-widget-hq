@@ -18,6 +18,16 @@ Multi-brand AI customer-support widget platform.
 | `widget_chat_logs` table | Every chat message per brand/session |
 | `widget_handoffs` table | "Talk to a human" requests (name, contact, message, open/done) |
 
+## Client portal (ticketing + analytics)
+
+- URL: https://ainfluencermethod.github.io/aib-widget-hq/portal.html (Slovenian UI)
+- VBO login: `vbo@ainfluencerblueprint.com` / `VBO-podpora-2026` (hand over + let them change it)
+- A client account is an auth user + a row in `brand_members` — it sees ONLY its own brand.
+- Tickets = "talk to a human" requests. Lifecycle: Odprt -> Prevzemi (V obdelavi, stamps first response) -> Rešeno (stamps resolution). Internal notes per ticket (`ticket_notes`).
+- Ticket detail shows the visitor's full chat transcript.
+- Analitika tab (RPC `portal_stats`): conversations, visitor questions, tickets by status, resolved %, avg first response, avg resolution time, AI-deflection %, 14-day daily chart.
+- Add a portal user for a new brand: create the auth user, then `insert into brand_members (brand_slug, user_id) values ('<slug>', '<uid>');`
+
 ## Daily use
 
 1. Open the dashboard, sign in.
