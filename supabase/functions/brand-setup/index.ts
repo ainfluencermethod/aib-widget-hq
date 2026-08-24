@@ -1,13 +1,20 @@
-// AIB Brand Setup — 1-click onboarding for a new brand.
-// POST { name, website } (JWT required; platform verifies it)
-// 1. Fetches the brand website.
-// 2. Claude reads it and writes the full widget config + system prompt.
-// 3. Inserts a row into widget_clients, owned by the calling user.
-// Returns { brand, snippet }.
+// AIB Brand Setup — 1-click onboarding with a real site scrape.
+// POST { name, website }          -> create a new brand (JWT required; platform verifies it)
+// POST { rescan: true, slug }     -> re-scrape + regenerate an existing brand (needs ANTHROPIC_API_KEY)
+//
+// Scrape: homepage + up to MAX_PAGES prioritized internal pages (prices, FAQ,
+// contact, about, services…). The corpus goes to Claude, which writes the full
+// widget config + system prompt. The raw corpus is stored in
+// widget_clients.scraped_context for audit and future regeneration.
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+const MAX_PAGES = 8;
+const PAGE_TEXT_CAP = 12000;
+const HOMEPAGE_HTML_CAP = 40000;
+const CORPUS_CAP = 120000;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -47,26 +54,125 @@ function userIdFromJwt(auth: string | null): string | null {
   }
 }
 
-async function fetchSite(website: string): Promise<string> {
+// ---------------- scraping ----------------
+
+async function fetchPage(url: string, timeoutMs = 10000): Promise<string> {
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 12000);
-    const res = await fetch(website, {
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    const res = await fetch(url, {
       signal: ctrl.signal,
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; AIB-WidgetSetup/1.0)" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; AIB-WidgetSetup/1.0)",
+        "Accept": "text/html,application/xhtml+xml",
+      },
     });
     clearTimeout(t);
     if (!res.ok) return "";
-    const html = await res.text();
-    // Drop scripts, keep markup (inline styles carry brand colors).
-    return html
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
-      .replace(/<svg[\s\S]*?<\/svg>/gi, "")
-      .slice(0, 60000);
+    const type = res.headers.get("content-type") ?? "";
+    if (type && !type.includes("html")) return "";
+    return await res.text();
   } catch (_e) {
     return "";
   }
 }
+
+function stripNoise(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<svg[\s\S]*?<\/svg>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "");
+}
+
+function htmlToText(html: string): string {
+  const noStyleBlocks = stripNoise(html)
+    .replace(/<(br|\/p|\/div|\/li|\/h[1-6]|\/tr)[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, " ");
+  return noStyleBlocks
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n+/g, "\n")
+    .trim();
+}
+
+// High-value pages first: prices, FAQ, contact, about, services (multi-language).
+const LINK_KEYWORDS = [
+  "cena", "cenik", "price", "pricing", "preis", "tarif",
+  "faq", "vprasanja", "vprašanja", "questions", "pogosta",
+  "kontakt", "contact", "kje-smo", "lokacij", "location",
+  "o-nas", "onas", "about", "uber-uns", "team", "ekipa",
+  "storitve", "service", "ponudba", "offer", "paketi", "plans",
+  "kako", "how-it-works", "postopek", "delivery", "dostava",
+  "garancija", "warranty", "vracil", "return", "pogoji", "terms",
+];
+
+function scoreLink(url: string): number {
+  const u = url.toLowerCase();
+  let score = 0;
+  for (const kw of LINK_KEYWORDS) if (u.includes(kw)) score += 10;
+  score -= (u.match(/\//g) ?? []).length; // prefer shallow pages
+  return score;
+}
+
+function extractLinks(html: string, base: string): string[] {
+  const origin = new URL(base).origin;
+  const found = new Set<string>();
+  const re = /href\s*=\s*["']([^"'#]+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    try {
+      const u = new URL(m[1], base);
+      if (u.origin !== origin) continue;
+      if (/\.(png|jpe?g|gif|webp|svg|ico|css|js|pdf|zip|mp4|webm|woff2?|ttf|xml|json)(\?|$)/i.test(u.pathname)) continue;
+      u.hash = "";
+      const clean = u.toString().replace(/\/$/, "");
+      if (clean !== origin && clean !== base.replace(/\/$/, "")) found.add(clean);
+    } catch (_e) { /* ignore bad urls */ }
+  }
+  return [...found].sort((a, b) => scoreLink(b) - scoreLink(a)).slice(0, MAX_PAGES);
+}
+
+interface ScrapeResult {
+  homepageHtml: string;
+  corpus: string;
+  pagesScanned: string[];
+}
+
+async function scrapeSite(website: string): Promise<ScrapeResult> {
+  const rawHome = await fetchPage(website, 12000);
+  if (!rawHome) return { homepageHtml: "", corpus: "", pagesScanned: [] };
+
+  const homepageHtml = stripNoise(rawHome).slice(0, HOMEPAGE_HTML_CAP);
+  const links = extractLinks(rawHome, website);
+
+  const pages = await Promise.all(
+    links.map(async (url) => {
+      const html = await fetchPage(url, 8000);
+      const text = html ? htmlToText(html).slice(0, PAGE_TEXT_CAP) : "";
+      return { url, text };
+    }),
+  );
+
+  const good = pages.filter((p) => p.text.length > 200);
+  let corpus =
+    `## HOMEPAGE (${website}) — raw HTML, use it for brand colors and structure\n` +
+    homepageHtml +
+    `\n\n## HOMEPAGE TEXT\n` + htmlToText(rawHome).slice(0, PAGE_TEXT_CAP);
+  for (const p of good) {
+    corpus += `\n\n## PAGE: ${p.url}\n${p.text}`;
+  }
+  corpus = corpus.slice(0, CORPUS_CAP);
+
+  return { homepageHtml, corpus, pagesScanned: [website, ...good.map((p) => p.url)] };
+}
+
+// ---------------- generation ----------------
 
 interface GeneratedConfig {
   language: string;
@@ -106,12 +212,14 @@ function fallbackConfig(name: string, website: string): GeneratedConfig {
   };
 }
 
-async function generateConfig(name: string, website: string, html: string): Promise<GeneratedConfig> {
-  if (!ANTHROPIC_API_KEY || !html) return fallbackConfig(name, website);
+async function generateConfig(name: string, website: string, corpus: string): Promise<GeneratedConfig> {
+  if (!ANTHROPIC_API_KEY || !corpus) return fallbackConfig(name, website);
 
   const instructions =
     `You configure an embeddable AI customer-support chat widget for the brand "${name}" (${website}).\n` +
-    `Below is the raw HTML of the brand's website. Read it and produce the widget configuration.\n\n` +
+    `Below is a scrape of the brand's website: the homepage HTML (use it for brand colors) plus the ` +
+    `text of its most important pages (prices, FAQ, contact, about, services). Read everything and ` +
+    `produce the widget configuration.\n\n` +
     `Return ONLY a JSON object, no markdown fences, with exactly these keys:\n` +
     `{\n` +
     `  "language": "<primary site language code, e.g. en, sl, de>",\n` +
@@ -137,13 +245,14 @@ async function generateConfig(name: string, website: string, html: string): Prom
     `  "system_prompt": "<full system prompt for the support AI, written in the site language>"\n` +
     `}\n\n` +
     `Rules for system_prompt: give the assistant a name and friendly persona; include a '## Facts' section with ` +
-    `every concrete fact found on the site (services, prices, offers, locations, contacts, hours, guarantees); ` +
-    `include a '## Goal' section (guide visitors to the site's main call to action); include a '## Rules' section: ` +
-    `answer briefly (2-5 sentences), never invent facts or prices, no medical/legal/financial advice, ` +
-    `redirect off-topic questions politely, reply in the visitor's language, and escalate to the brand's ` +
-    `real contact channels when unsure; when the visitor asks for a human, point to the ` +
-    `'talk to a human' button below the chat. Only use facts that appear in the HTML.\n\n` +
-    `WEBSITE HTML:\n${html}`;
+    `EVERY concrete fact found anywhere in the scrape (services, prices, offers, discounts, locations, ` +
+    `phone numbers, emails, opening hours, guarantees, delivery/return policies, team members) — be exhaustive, ` +
+    `this is the assistant's entire knowledge base; include a '## Goal' section (guide visitors to the site's ` +
+    `main call to action); include a '## Rules' section: answer briefly (2-5 sentences), never invent facts or ` +
+    `prices, no medical/legal/financial advice, redirect off-topic questions politely, reply in the visitor's ` +
+    `language, and escalate to the brand's real contact channels when unsure; when the visitor asks for a human, ` +
+    `point to the 'talk to a human' button below the chat. Only use facts that appear in the scrape.\n\n` +
+    `WEBSITE SCRAPE:\n${corpus}`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -155,7 +264,7 @@ async function generateConfig(name: string, website: string, html: string): Prom
       },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 3500,
+        max_tokens: 4000,
         messages: [{ role: "user", content: instructions }],
       }),
     });
@@ -180,17 +289,78 @@ async function generateConfig(name: string, website: string, html: string): Prom
   }
 }
 
+// ---------------- db helpers ----------------
+
+const dbHeaders = {
+  "Content-Type": "application/json",
+  "apikey": SERVICE_ROLE_KEY,
+  "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
+};
+
+async function getBrandRow(slug: string) {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/widget_clients?slug=eq.${slug}&select=*`,
+    { headers: dbHeaders },
+  );
+  const rows = res.ok ? await res.json() : [];
+  return rows[0] ?? null;
+}
+
+// ---------------- handler ----------------
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 
-  let body: { name?: string; website?: string };
+  let body: { name?: string; website?: string; rescan?: boolean; slug?: string };
   try {
     body = await req.json();
   } catch (_e) {
     return json({ error: "invalid json" }, 400);
   }
 
+  const owner = userIdFromJwt(req.headers.get("Authorization"));
+  if (!owner) return json({ error: "unauthorized" }, 401);
+
+  // ---------- rescan an existing brand ----------
+  if (body.rescan) {
+    const slug = (body.slug ?? "").trim();
+    if (!slug) return json({ error: "slug required" }, 400);
+    if (!ANTHROPIC_API_KEY) {
+      return json({ error: "Rescan needs the ANTHROPIC_API_KEY secret. Set it in Supabase first." }, 400);
+    }
+    const row = await getBrandRow(slug);
+    if (!row) return json({ error: "unknown brand" }, 404);
+    if (!row.website) return json({ error: "brand has no website" }, 400);
+
+    const scrape = await scrapeSite(row.website);
+    if (!scrape.corpus) return json({ error: "could not read the website" }, 400);
+    const gen = await generateConfig(row.name, row.website, scrape.corpus);
+
+    const upd = await fetch(`${SUPABASE_URL}/rest/v1/widget_clients?slug=eq.${slug}`, {
+      method: "PATCH",
+      headers: { ...dbHeaders, "Prefer": "return=representation" },
+      body: JSON.stringify({
+        widget: gen.widget,
+        system_prompt: gen.system_prompt,
+        scraped_context: scrape.corpus.slice(0, 100000),
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    if (!upd.ok) {
+      console.error("rescan update error", upd.status, await upd.text());
+      return json({ error: "could not save brand" }, 500);
+    }
+    const saved = (await upd.json())[0];
+    return json({
+      brand: saved,
+      snippet: `<script src="${SUPABASE_URL}/functions/v1/support-widget?client=${slug}" defer></script>`,
+      ai_generated: true,
+      pages_scanned: scrape.pagesScanned,
+    });
+  }
+
+  // ---------- create a new brand ----------
   const name = (body.name ?? "").trim().slice(0, 80);
   let website = (body.website ?? "").trim().slice(0, 300);
   if (!name || !website) return json({ error: "name and website are required" }, 400);
@@ -202,22 +372,14 @@ Deno.serve(async (req: Request) => {
     return json({ error: "invalid website url" }, 400);
   }
 
-  const owner = userIdFromJwt(req.headers.get("Authorization"));
-  if (!owner) return json({ error: "unauthorized" }, 401);
-
-  const html = await fetchSite(website);
-  const gen = await generateConfig(name, website, html);
+  const scrape = await scrapeSite(website);
+  const gen = await generateConfig(name, website, scrape.corpus);
 
   // Unique slug.
   const base = slugify(name);
   let slug = base;
   for (let i = 2; i < 20; i++) {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/widget_clients?slug=eq.${slug}&select=slug`,
-      { headers: { "apikey": SERVICE_ROLE_KEY, "Authorization": `Bearer ${SERVICE_ROLE_KEY}` } },
-    );
-    const rows = res.ok ? await res.json() : [];
-    if (rows.length === 0) break;
+    if (!(await getBrandRow(slug))) break;
     slug = `${base}-${i}`;
   }
 
@@ -240,17 +402,13 @@ Deno.serve(async (req: Request) => {
     ],
     widget: gen.widget,
     system_prompt: gen.system_prompt,
+    scraped_context: scrape.corpus.slice(0, 100000),
     active: true,
   };
 
   const ins = await fetch(`${SUPABASE_URL}/rest/v1/widget_clients`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SERVICE_ROLE_KEY,
-      "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
-      "Prefer": "return=representation",
-    },
+    headers: { ...dbHeaders, "Prefer": "return=representation" },
     body: JSON.stringify(row),
   });
   if (!ins.ok) {
@@ -259,12 +417,10 @@ Deno.serve(async (req: Request) => {
   }
   const saved = (await ins.json())[0];
 
-  const snippet =
-    `<script src="${SUPABASE_URL}/functions/v1/support-widget?client=${slug}" defer></script>`;
-
   return json({
     brand: saved,
-    snippet,
-    ai_generated: Boolean(ANTHROPIC_API_KEY && html),
+    snippet: `<script src="${SUPABASE_URL}/functions/v1/support-widget?client=${slug}" defer></script>`,
+    ai_generated: Boolean(ANTHROPIC_API_KEY && scrape.corpus),
+    pages_scanned: scrape.pagesScanned,
   });
 });

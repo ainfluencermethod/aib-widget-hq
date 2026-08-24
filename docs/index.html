@@ -133,6 +133,7 @@
         <a class="backlink" id="backBtn">← All brands</a>
         <div class="sp"></div>
         <a class="btn ghost" id="previewBtn" target="_blank">Preview widget</a>
+        <button class="btn ghost" id="rescanBtn">↻ Rescan site</button>
         <button class="btn danger" id="deleteBtn">Delete</button>
       </div>
       <div class="detailWrap">
@@ -311,12 +312,13 @@ $("nb_go").onclick = async () => {
   $("nb_go").innerHTML = '<span class="spin"></span>Reading the site…';
   try {
     const { data, error } = await db.functions.invoke("brand-setup", { body: { name, website } });
-    if (error) throw new Error(error.message || "setup failed");
+    if (error) throw new Error(await fnErrText(error));
     if (data.error) throw new Error(data.error);
     $("newModal").classList.add("hidden");
     $("nb_name").value = ""; $("nb_site").value = "";
     await loadBrands();
     openDetail(data.brand.slug);
+    if (data.pages_scanned) $("saveMsg").textContent = `Scanned ${data.pages_scanned.length} pages of the site ✓`;
   } catch (e) {
     $("nb_err").textContent = e.message;
   } finally {
@@ -354,6 +356,34 @@ function openDetail(slug) {
   $("saveMsg").textContent = "";
   switchTab("cfg");
 }
+
+async function fnErrText(error) {
+  try {
+    const j = await error.context.json();
+    if (j && j.error) return j.error;
+  } catch (_e) { /* no json body */ }
+  return error.message || "request failed";
+}
+
+$("rescanBtn").onclick = async () => {
+  if (!current) return;
+  if (!confirm(`Rescan ${current.website} and rebuild the AI config for "${current.name}"?\nManual edits to settings and prompt will be overwritten.`)) return;
+  $("rescanBtn").disabled = true;
+  $("rescanBtn").textContent = "Scanning site…";
+  try {
+    const { data, error } = await db.functions.invoke("brand-setup", { body: { rescan: true, slug: current.slug } });
+    if (error) throw new Error(await fnErrText(error));
+    if (data.error) throw new Error(data.error);
+    await loadBrands();
+    openDetail(current.slug);
+    $("saveMsg").textContent = `Rescanned ${data.pages_scanned.length} pages ✓`;
+  } catch (e) {
+    alert("Rescan error: " + e.message);
+  } finally {
+    $("rescanBtn").disabled = false;
+    $("rescanBtn").textContent = "↻ Rescan site";
+  }
+};
 
 $("backBtn").onclick = () => { $("detailView").classList.add("hidden"); $("listView").classList.remove("hidden"); };
 
