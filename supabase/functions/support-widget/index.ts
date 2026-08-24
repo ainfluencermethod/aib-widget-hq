@@ -87,6 +87,37 @@ function errMsg(row: BrandRow): string {
   return (row.widget?.errorMessage as string) ?? "Sorry, I cannot answer right now.";
 }
 
+const svcHeaders = {
+  "Content-Type": "application/json",
+  "apikey": SERVICE_ROLE_KEY,
+  "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
+};
+
+// Live takeover: is a human agent handling this session right now?
+async function liveAgentFor(slug: string, session: string): Promise<string | null> {
+  if (!session) return null;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/widget_handoffs?client_id=eq.${slug}&session_id=eq.${encodeURIComponent(session)}&live=is.true&select=agent_name&limit=1`,
+      { headers: svcHeaders },
+    );
+    const rows = res.ok ? await res.json() : [];
+    return rows.length ? (rows[0].agent_name ?? "") : null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+async function logOne(clientId: string, session: string, page: string, role: string, content: string) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/widget_chat_logs`, {
+      method: "POST",
+      headers: { ...svcHeaders, "Prefer": "return=minimal" },
+      body: JSON.stringify({ client_id: clientId, session_id: session, page, role, content }),
+    });
+  } catch (_e) { /* logging must never break the chat */ }
+}
+
 async function logChat(
   clientId: string,
   session: string,
@@ -120,6 +151,28 @@ Deno.serve(async (req: Request) => {
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(origin) });
+  }
+
+  // ---------- GET ?sync=1: live-chat sync (poll from the widget) ----------
+  if (req.method === "GET" && url.searchParams.get("sync") === "1") {
+    const slug = url.searchParams.get("client") ?? "";
+    const session = (url.searchParams.get("session") ?? "").slice(0, 100);
+    const after = parseInt(url.searchParams.get("after") ?? "0", 10) || 0;
+    const row = await getBrand(slug);
+    if (!row || !session) return json({ error: "bad request" }, 400, origin);
+    const agent = await liveAgentFor(slug, session);
+    let msgs: unknown[] = [];
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/widget_chat_logs?client_id=eq.${slug}&session_id=eq.${encodeURIComponent(session)}&role=eq.agent&id=gt.${after}&select=id,content&order=id.asc&limit=50`,
+        { headers: svcHeaders },
+      );
+      if (res.ok) msgs = await res.json();
+    } catch (_e) { /* empty */ }
+    return new Response(JSON.stringify({ live: agent !== null, agent: agent ?? "", messages: msgs }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...corsHeaders(origin) },
+    });
   }
 
   // ---------- GET: serve widget.js ----------
@@ -219,6 +272,14 @@ Deno.serve(async (req: Request) => {
     .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }));
   if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
     return json({ error: "no user message" }, 400, origin);
+  }
+
+  // ---------- live takeover: a human agent answers, the AI stays silent ----------
+  const liveAgent = await liveAgentFor(row.slug, payload.session ?? "");
+  if (liveAgent !== null) {
+    const userMsg = messages[messages.length - 1].content;
+    await logOne(row.slug, payload.session ?? "", payload.page ?? "", "user", userMsg);
+    return json({ live: true, agent: liveAgent }, 200, origin);
   }
 
   if (!ANTHROPIC_API_KEY) {

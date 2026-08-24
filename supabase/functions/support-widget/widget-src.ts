@@ -18,8 +18,18 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
   var busy = false;
   var open = false;
 
+  /* live takeover state: a human agent replaces the AI for this session */
+  var liveMode = false;
+  var liveAgent = '';
+  var lastMsgId = 0;
+  var pollTimer = null;
+  try { lastMsgId = parseInt(sessionStorage.getItem('aib_last_' + CFG.clientId) || '0', 10) || 0; } catch (e) {}
+
   function persist() {
     try { sessionStorage.setItem(STORE_KEY, JSON.stringify(messages.slice(-40))); } catch (e) {}
+  }
+  function persistLast() {
+    try { sessionStorage.setItem('aib_last_' + CFG.clientId, String(lastMsgId)); } catch (e) {}
   }
 
   /* ---------- host + shadow DOM ---------- */
@@ -192,7 +202,7 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
     persist();
     addBubble('user', text);
     renderQuick();
-    showTyping();
+    if (!liveMode) showTyping();
 
     var payload = {
       client: CFG.clientId,
@@ -209,6 +219,11 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
       .then(function (r) { return r.json(); })
       .then(function (data) {
         hideTyping();
+        if (data && data.live) {
+          // a human agent has this conversation; their reply arrives via sync()
+          enterLive(data.agent || '');
+          return;
+        }
         var reply = (data && data.reply) || CFG.errorMessage || 'Sorry, something went wrong.';
         messages.push({ role: 'assistant', content: reply });
         persist();
@@ -216,13 +231,55 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
       })
       .catch(function () {
         hideTyping();
-        addBubble('assistant', CFG.errorMessage || 'Sorry, something went wrong.');
+        if (!liveMode) addBubble('assistant', CFG.errorMessage || 'Sorry, something went wrong.');
       })
       .finally(function () {
         busy = false;
         sendBtn.disabled = false;
         input.focus();
       });
+  }
+
+  /* ---------- live takeover ---------- */
+  function enterLive(agent) {
+    if (liveMode) return;
+    liveMode = true;
+    liveAgent = agent || '';
+    var note = (liveAgent ? liveAgent + ' ' : '') + (CFG.liveJoined || 'from our team joined the chat.');
+    messages.push({ role: 'assistant', content: note });
+    persist();
+    addBubble('assistant', note);
+  }
+
+  function sync() {
+    fetch(ENDPOINT + '?sync=1&client=' + encodeURIComponent(CFG.clientId) +
+          '&session=' + encodeURIComponent(sessionId()) + '&after=' + lastMsgId)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data) return;
+        if (data.live) enterLive(data.agent || '');
+        else liveMode = false;
+        var msgs = data.messages || [];
+        var added = false;
+        msgs.forEach(function (m) {
+          if (m.id <= lastMsgId) return;
+          lastMsgId = m.id;
+          messages.push({ role: 'assistant', content: m.content });
+          addBubble('assistant', m.content);
+          added = true;
+        });
+        if (added) { persist(); persistLast(); }
+      })
+      .catch(function () {});
+  }
+
+  function startPoll() {
+    if (pollTimer) return;
+    sync();
+    pollTimer = setInterval(sync, 4000);
+  }
+  function stopPoll() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   }
 
   function sessionId() {
@@ -300,9 +357,13 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
   panel.querySelector('#aib-new').onclick = function () {
     if (busy) return;
     messages = [];
+    liveMode = false;
+    liveAgent = '';
+    lastMsgId = 0;
     try {
       sessionStorage.removeItem(STORE_KEY);
       sessionStorage.removeItem('aib_sid_' + CFG.clientId); // next send gets a fresh session id
+      sessionStorage.removeItem('aib_last_' + CFG.clientId);
     } catch (e) {}
     renderAll();
     input.value = '';
@@ -315,12 +376,16 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
     if (open) {
       badge.style.display = 'none';
       renderAll();
+      startPoll();
       setTimeout(function () { input.focus(); }, 50);
+    } else {
+      stopPoll();
     }
   };
   panel.querySelector('.x').onclick = function () {
     open = false;
     panel.classList.remove('open');
+    stopPoll();
   };
   sendBtn.onclick = function () { send(); };
   input.addEventListener('keydown', function (e) {
