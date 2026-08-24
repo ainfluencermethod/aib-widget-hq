@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Podpora — portal</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎫</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{--accent:#F97316;--accent-d:#EA580C;--bg:#F8FAFC;--card:#fff;--ink:#0F172A;
+    --mut:#64748B;--line:#E2E8F0;--ok:#16A34A;--bad:#DC2626;--warn:#D97706}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+  button{font:inherit;cursor:pointer}
+  input,textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 12px;background:#fff;color:var(--ink)}
+  input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--mut);margin:14px 0 5px}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-weight:700}
+  .btn:hover{background:var(--accent-d)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);font-weight:600}
+  .btn.ok{background:var(--ok)}
+  .btn.sm{padding:6px 12px;font-size:13px}
+  .hidden{display:none !important}
+  .note{font-size:13px;color:var(--mut)}
+  .err{color:var(--bad);font-size:13.5px;margin-top:10px;min-height:18px}
+
+  #authView{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:linear-gradient(160deg,#FFF7ED,#F8FAFC 55%)}
+  .authCard{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    box-shadow:0 10px 40px rgba(15,23,42,.08);width:100%;max-width:400px;padding:34px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;margin-bottom:6px}
+  .logo .dot{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-d));
+    display:flex;align-items:center;justify-content:center;font-size:17px}
+
+  #appView{min-height:100vh;display:flex;flex-direction:column}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:0 22px;height:58px;display:flex;align-items:center;gap:14px}
+  header .sp{flex:1}
+  header .who{font-size:13px;color:var(--mut)}
+  main{flex:1;max-width:1100px;width:100%;margin:0 auto;padding:22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+  .tabs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 18px;font-size:14px;font-weight:600;color:var(--mut)}
+  .tabs button.act{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .chips{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .chips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 14px;font-size:13px;color:var(--mut);font-weight:600}
+  .chips button.act{border-color:var(--accent);color:var(--accent);background:#FFF7ED}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:box-shadow .12s}
+  .card:hover{box-shadow:0 6px 20px rgba(15,23,42,.08)}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .row .sp{flex:1}
+  .badge{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:3px 10px}
+  .badge.open{background:#FEE2E2;color:#B91C1C}
+  .badge.in_progress{background:#FEF3C7;color:#B45309}
+  .badge.resolved{background:#DCFCE7;color:#15803D}
+  .tmeta{font-size:12px;color:var(--mut)}
+  .tname{font-weight:700}
+  .tmsg{font-size:13.5px;color:var(--mut);margin-top:4px}
+
+  .panelBox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:14px}
+  .panelBox h2{font-size:16px;margin-bottom:10px}
+  .backlink{color:var(--accent);font-weight:700;text-decoration:none;font-size:13.5px;cursor:pointer}
+  .contactBig{font-size:17px;font-weight:800}
+  .contactBig a{color:var(--accent);text-decoration:none}
+
+  .chat{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;background:#F8FAFC;border-radius:10px;padding:12px}
+  .bub{max-width:85%;padding:9px 12px;border-radius:12px;font-size:13.5px;line-height:1.45;white-space:pre-wrap}
+  .bub.user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+  .bub.assistant{background:#fff;border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
+  .bub .bm{font-size:10.5px;opacity:.7;margin-top:3px}
+
+  .noteRow{border-bottom:1px solid var(--line);padding:8px 2px;font-size:13.5px}
+  .noteRow .meta{font-size:11.5px;color:var(--mut)}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .kpi .v{font-size:26px;font-weight:800;line-height:1.1}
+  .kpi .l{font-size:12px;color:var(--mut);margin-top:4px}
+  .kpi.hl .v{color:var(--accent)}
+
+  .chart{display:flex;align-items:flex-end;gap:6px;height:160px;padding:10px 4px 0}
+  .chart .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+  .chart .bars{display:flex;align-items:flex-end;gap:2px;height:120px}
+  .chart .bar{width:12px;border-radius:4px 4px 0 0;min-height:2px}
+  .chart .bar.s{background:var(--accent)}
+  .chart .bar.t{background:#0F172A}
+  .chart .d{font-size:10px;color:var(--mut);white-space:nowrap}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--mut);margin-top:8px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+</style>
+</head>
+<body>
+
+<div id="authView">
+  <div class="authCard">
+    <div class="logo"><span class="dot">🎫</span>Portal za podporo</div>
+    <p class="note">Prijava za ekipo podpore.</p>
+    <label>E-pošta</label>
+    <input id="authEmail" type="email" autocomplete="email">
+    <label>Geslo</label>
+    <input id="authPass" type="password" autocomplete="current-password">
+    <div style="margin-top:20px"><button class="btn" id="authBtn" style="width:100%">Prijava</button></div>
+    <div class="err" id="authErr"></div>
+  </div>
+</div>
+
+<div id="appView" class="hidden">
+  <header>
+    <div class="logo"><span class="dot">🎫</span><span id="brandName">Podpora</span></div>
+    <div class="sp"></div>
+    <span class="who" id="whoami"></span>
+    <button class="btn ghost" id="signOut">Odjava</button>
+  </header>
+  <main>
+    <div class="tabs">
+      <button class="act" data-tab="tickets">🎫 Zahtevki <span id="openCount"></span></button>
+      <button data-tab="convos">💬 Pogovori</button>
+      <button data-tab="stats">📊 Analitika</button>
+    </div>
+
+    <!-- tickets list -->
+    <section id="tab-tickets">
+      <div class="chips" id="statusChips">
+        <button data-f="open" class="act">Odprti</button>
+        <button data-f="in_progress">V obdelavi</button>
+        <button data-f="resolved">Rešeni</button>
+        <button data-f="all">Vsi</button>
+      </div>
+      <div id="ticketList"><p class="note">Nalagam …</p></div>
+    </section>
+
+    <!-- ticket detail -->
+    <section id="tab-ticket" class="hidden">
+      <p style="margin-bottom:12px"><a class="backlink" id="ticketBack">← Nazaj na zahtevke</a></p>
+      <div class="panelBox">
+        <div class="row">
+          <div>
+            <div class="contactBig" id="tdName"></div>
+            <div class="contactBig" id="tdContact"></div>
+            <div class="tmeta" id="tdMeta" style="margin-top:6px"></div>
+          </div>
+          <div class="sp"></div>
+          <span class="badge" id="tdBadge"></span>
+        </div>
+        <div id="tdMsg" style="margin-top:12px;font-size:14px"></div>
+        <div class="row" style="margin-top:16px;gap:8px">
+          <button class="btn sm" id="takeBtn">▶ Prevzemi</button>
+          <button class="btn sm ok" id="resolveBtn">✓ Označi kot rešeno</button>
+          <button class="btn sm ghost" id="reopenBtn">↩ Ponovno odpri</button>
+          <span class="note" id="tdSaveMsg"></span>
+        </div>
+      </div>
+
+      <div class="panelBox">
+        <h2>Pogovor z obiskovalcem</h2>
+        <div class="chat" id="tdChat"><p class="note">Nalagam …</p></div>
+      </div>
+
+      <div class="panelBox">
+        <h2>Interni zapiski</h2>
+        <div id="tdNotes"></div>
+        <label>Nov zapisek (npr. "Poklicana, termin v četrtek")</label>
+        <textarea id="noteInput" rows="2"></textarea>
+        <div style="margin-top:10px"><button class="btn sm" id="noteBtn">Dodaj zapisek</button></div>
+      </div>
+    </section>
+
+    <!-- conversations -->
+    <section id="tab-convos" class="hidden">
+      <div id="convoList"><p class="note">Nalagam …</p></div>
+    </section>
+    <section id="tab-convo" class="hidden">
+      <p style="margin-bottom:12px"><a class="backlink" id="convoBack">← Nazaj na pogovore</a></p>
+      <div class="panelBox">
+        <h2 id="convoTitle">Pogovor</h2>
+        <div class="chat" id="convoChat"></div>
+      </div>
+    </section>
+
+    <!-- analytics -->
+    <section id="tab-stats" class="hidden">
+      <div class="kpis" id="kpis"></div>
+      <div class="panelBox">
+        <h2>Zadnjih 14 dni</h2>
+        <div class="chart" id="chart"></div>
+        <div class="legend">
+          <span><i style="background:var(--accent)"></i>Pogovori</span>
+          <span><i style="background:#0F172A"></i>Zahtevki za človeka</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const SUPABASE_URL = "https://fwynqfnrorhuixodnezs.supabase.co";
+const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eW5xZm5yb3JodWl4b2RuZXpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NjQwMDAsImV4cCI6MjEwMjA0MDAwMH0.d3L1gA4VG3ft1VSAToNCi4Q9icG_VQfLoSEt4WAD4KQ";
+const db = window.supabase.createClient(SUPABASE_URL, ANON_KEY);
+const $ = (id) => document.getElementById(id);
+
+const STATUS_LABEL = { open: "Odprt", in_progress: "V obdelavi", resolved: "Rešen" };
+let brand = null;
+let tickets = [];
+let filter = "open";
+let currentTicket = null;
+let userEmail = "";
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function fmtDate(s) { return new Date(s).toLocaleString("sl-SI", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }); }
+function fmtMin(m) {
+  if (m == null) return "—";
+  if (m < 60) return m + " min";
+  return Math.round(m / 6) / 10 + " h";
+}
+function contactLink(c) {
+  if (/@/.test(c)) return `<a href="mailto:${esc(c)}">${esc(c)}</a>`;
+  const digits = c.replace(/[^+0-9]/g, "");
+  if (digits.length >= 6) return `<a href="tel:${esc(digits)}">${esc(c)}</a>`;
+  return esc(c);
+}
+
+/* ---------- auth ---------- */
+async function refreshAuth() {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    userEmail = session.user.email;
+    $("authView").classList.add("hidden");
+    $("appView").classList.remove("hidden");
+    $("whoami").textContent = userEmail;
+    boot();
+  } else {
+    $("authView").classList.remove("hidden");
+    $("appView").classList.add("hidden");
+  }
+}
+db.auth.onAuthStateChange(() => refreshAuth());
+$("authBtn").onclick = async () => {
+  $("authErr").textContent = "";
+  $("authBtn").disabled = true;
+  const { error } = await db.auth.signInWithPassword({ email: $("authEmail").value.trim(), password: $("authPass").value });
+  $("authBtn").disabled = false;
+  if (error) $("authErr").textContent = "Prijava ni uspela. Preverite e-pošto in geslo.";
+};
+$("authPass").addEventListener("keydown", (e) => { if (e.key === "Enter") $("authBtn").click(); });
+$("signOut").onclick = () => db.auth.signOut();
+
+/* ---------- boot: resolve brand ---------- */
+async function boot() {
+  const { data, error } = await db.from("widget_clients").select("slug,name,widget").order("created_at");
+  if (error || !data || !data.length) {
+    $("brandName").textContent = "Ni dostopa";
+    $("ticketList").innerHTML = '<p class="note">Vaš račun nima dostopa do nobene znamke. Obrnite se na skrbnika.</p>';
+    return;
+  }
+  brand = data[0]; // client accounts see exactly their brand(s)
+  $("brandName").textContent = brand.name + " — podpora";
+  loadTickets();
+}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll(".tabs button").forEach((b) => {
+  b.onclick = () => {
+    document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("act", x === b));
+    showTab(b.dataset.tab);
+  };
+});
+function showTab(t) {
+  ["tickets", "ticket", "convos", "convo", "stats"].forEach((x) => $("tab-" + x).classList.toggle("hidden", x !== t));
+  if (t === "tickets") loadTickets();
+  if (t === "convos") loadConvos();
+  if (t === "stats") loadStats();
+}
+
+/* ---------- tickets ---------- */
+document.querySelectorAll("#statusChips button").forEach((b) => {
+  b.onclick = () => {
+    document.querySelectorAll("#statusChips button").forEach((x) => x.classList.toggle("act", x === b));
+    filter = b.dataset.f;
+    renderTickets();
+  };
+});
+
+async function loadTickets() {
+  const { data, error } = await db.from("widget_handoffs")
+    .select("*").eq("client_id", brand.slug)
+    .order("created_at", { ascending: false }).limit(300);
+  if (error) { $("ticketList").innerHTML = `<p class="note">Napaka: ${esc(error.message)}</p>`; return; }
+  tickets = data ?? [];
+  const open = tickets.filter((t) => t.status === "open").length;
+  $("openCount").textContent = open ? `(${open})` : "";
+  renderTickets();
+}
+
+function renderTickets() {
+  const list = filter === "all" ? tickets : tickets.filter((t) => t.status === filter);
+  if (!list.length) { $("ticketList").innerHTML = '<p class="note">Ni zahtevkov v tem pogledu. 🎉</p>'; return; }
+  $("ticketList").innerHTML = "";
+  list.forEach((t) => {
+    const c = document.createElement("div");
+    c.className = "card";
+    c.innerHTML =
+      `<div class="row">` +
+      `<span class="tname">#${t.id} · ${esc(t.name || "Brez imena")}</span>` +
+      `<span class="tmeta">${esc(t.contact)}</span>` +
+      `<div class="sp"></div>` +
+      `<span class="tmeta">${fmtDate(t.created_at)}</span>` +
+      `<span class="badge ${t.status}">${STATUS_LABEL[t.status]}</span>` +
+      `</div>` +
+      (t.message ? `<div class="tmsg">${esc(t.message)}</div>` : "");
+    c.onclick = () => openTicket(t.id);
+    $("ticketList").appendChild(c);
+  });
+}
+
+async function openTicket(id) {
+  currentTicket = tickets.find((t) => t.id === id);
+  if (!currentTicket) return;
+  showTab("ticket");
+  renderTicketHead();
+  loadTranscript(currentTicket.session_id, $("tdChat"));
+  loadNotes();
+}
+
+function renderTicketHead() {
+  const t = currentTicket;
+  $("tdName").textContent = `#${t.id} · ${t.name || "Brez imena"}`;
+  $("tdContact").innerHTML = contactLink(t.contact);
+  $("tdMeta").textContent = `Prejeto ${fmtDate(t.created_at)}` +
+    (t.first_response_at ? ` · prevzeto ${fmtDate(t.first_response_at)}` : "") +
+    (t.resolved_at ? ` · rešeno ${fmtDate(t.resolved_at)}` : "") +
+    (t.page ? ` · stran: ${t.page.slice(0, 60)}` : "");
+  $("tdMsg").textContent = t.message ? `»${t.message}«` : "";
+  $("tdBadge").className = "badge " + t.status;
+  $("tdBadge").textContent = STATUS_LABEL[t.status];
+  $("takeBtn").classList.toggle("hidden", t.status !== "open");
+  $("resolveBtn").classList.toggle("hidden", t.status === "resolved");
+  $("reopenBtn").classList.toggle("hidden", t.status !== "resolved");
+  $("tdSaveMsg").textContent = "";
+}
+
+async function setStatus(patch) {
+  $("tdSaveMsg").textContent = "Shranjujem …";
+  const { data, error } = await db.from("widget_handoffs")
+    .update(patch).eq("id", currentTicket.id).select();
+  if (error) { $("tdSaveMsg").textContent = "Napaka: " + error.message; return; }
+  currentTicket = data[0];
+  const i = tickets.findIndex((t) => t.id === currentTicket.id);
+  if (i >= 0) tickets[i] = currentTicket;
+  renderTicketHead();
+  $("tdSaveMsg").textContent = "Shranjeno ✓";
+  const open = tickets.filter((t) => t.status === "open").length;
+  $("openCount").textContent = open ? `(${open})` : "";
+}
+$("takeBtn").onclick = () => setStatus({
+  status: "in_progress",
+  first_response_at: currentTicket.first_response_at ?? new Date().toISOString(),
+});
+$("resolveBtn").onclick = () => setStatus({
+  status: "resolved",
+  first_response_at: currentTicket.first_response_at ?? new Date().toISOString(),
+  resolved_at: new Date().toISOString(),
+});
+$("reopenBtn").onclick = () => setStatus({ status: "open", resolved_at: null });
+$("ticketBack").onclick = () => { document.querySelector('[data-tab="tickets"]').click(); };
+
+/* ---------- transcript ---------- */
+async function loadTranscript(sessionId, box) {
+  if (!sessionId) { box.innerHTML = '<p class="note">Ni shranjenega pogovora.</p>'; return; }
+  const { data, error } = await db.from("widget_chat_logs")
+    .select("role,content,created_at")
+    .eq("client_id", brand.slug).eq("session_id", sessionId)
+    .order("created_at").limit(200);
+  if (error) { box.innerHTML = `<p class="note">Napaka: ${esc(error.message)}</p>`; return; }
+  if (!data.length) { box.innerHTML = '<p class="note">Ni shranjenega pogovora (obiskovalec je oddal samo obrazec).</p>'; return; }
+  box.innerHTML = data.map((m) =>
+    `<div class="bub ${m.role}">${esc(m.content)}<div class="bm">${fmtDate(m.created_at)}</div></div>`
+  ).join("");
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ---------- notes ---------- */
+async function loadNotes() {
+  const { data, error } = await db.from("ticket_notes")
+    .select("*").eq("ticket_id", currentTicket.id).order("created_at");
+  const box = $("tdNotes");
+  if (error) { box.innerHTML = `<p class="note">Napaka: ${esc(error.message)}</p>`; return; }
+  box.innerHTML = data.length
+    ? data.map((n) => `<div class="noteRow"><div class="meta">${fmtDate(n.created_at)} · ${esc(n.author)}</div>${esc(n.body)}</div>`).join("")
+    : '<p class="note">Še ni zapiskov.</p>';
+}
+$("noteBtn").onclick = async () => {
+  const body = $("noteInput").value.trim();
+  if (!body) return;
+  $("noteBtn").disabled = true;
+  const { error } = await db.from("ticket_notes").insert({ ticket_id: currentTicket.id, author: userEmail, body });
+  $("noteBtn").disabled = false;
+  if (error) { alert("Napaka: " + error.message); return; }
+  $("noteInput").value = "";
+  loadNotes();
+};
+
+/* ---------- conversations ---------- */
+async function loadConvos() {
+  const { data, error } = await db.from("widget_chat_logs")
+    .select("session_id,role,content,created_at")
+    .eq("client_id", brand.slug)
+    .order("created_at", { ascending: false }).limit(600);
+  const box = $("convoList");
+  if (error) { box.innerHTML = `<p class="note">Napaka: ${esc(error.message)}</p>`; return; }
+  const map = new Map();
+  data.forEach((m) => {
+    if (!map.has(m.session_id)) map.set(m.session_id, { last: m.created_at, count: 0, firstUser: "" });
+    const s = map.get(m.session_id);
+    s.count++;
+    if (m.role === "user") s.firstUser = m.content; // newest→oldest, so ends at the FIRST user msg
+  });
+  if (!map.size) { box.innerHTML = '<p class="note">Še ni pogovorov.</p>'; return; }
+  box.innerHTML = "";
+  [...map.entries()].forEach(([sid, s]) => {
+    const c = document.createElement("div");
+    c.className = "card";
+    c.innerHTML =
+      `<div class="row"><span class="tname">${esc((s.firstUser || "Pogovor").slice(0, 80))}</span>` +
+      `<div class="sp"></div><span class="tmeta">${s.count} sporočil · ${fmtDate(s.last)}</span></div>`;
+    c.onclick = () => {
+      showTab("convo");
+      $("convoTitle").textContent = "Pogovor · " + fmtDate(s.last);
+      loadTranscript(sid, $("convoChat"));
+    };
+    box.appendChild(c);
+  });
+}
+$("convoBack").onclick = () => { document.querySelector('[data-tab="convos"]').click(); };
+
+/* ---------- analytics ---------- */
+async function loadStats() {
+  $("kpis").innerHTML = '<p class="note">Nalagam …</p>';
+  const { data, error } = await db.rpc("portal_stats", { b: brand.slug });
+  if (error) { $("kpis").innerHTML = `<p class="note">Napaka: ${esc(error.message)}</p>`; return; }
+  const s = data;
+  const resolvedPct = s.tickets_total ? Math.round(100 * s.tickets_resolved / s.tickets_total) : 0;
+  const aiPct = s.sessions ? Math.round(100 * s.ai_only_sessions / s.sessions) : 0;
+  const kpis = [
+    { v: s.sessions, l: "Pogovorov skupaj", hl: 1 },
+    { v: s.user_messages, l: "Vprašanj obiskovalcev" },
+    { v: s.tickets_total, l: "Zahtevkov za človeka" },
+    { v: s.tickets_open, l: "Odprtih zahtevkov" },
+    { v: resolvedPct + " %", l: "Rešenih zahtevkov" },
+    { v: fmtMin(s.avg_first_response_min), l: "Povprečen prvi odziv" },
+    { v: fmtMin(s.avg_resolution_min), l: "Povprečen čas rešitve" },
+    { v: aiPct + " %", l: "Rešeno brez človeka (AI)", hl: 1 },
+  ];
+  $("kpis").innerHTML = kpis.map((k) =>
+    `<div class="kpi ${k.hl ? "hl" : ""}"><div class="v">${k.v ?? 0}</div><div class="l">${k.l}</div></div>`
+  ).join("");
+
+  const daily = s.daily || [];
+  const max = Math.max(1, ...daily.map((d) => Math.max(d.sessions, d.tickets)));
+  $("chart").innerHTML = daily.map((d) => {
+    const day = new Date(d.day).toLocaleDateString("sl-SI", { day: "numeric", month: "numeric" });
+    return `<div class="col"><div class="bars">` +
+      `<div class="bar s" style="height:${Math.round(118 * d.sessions / max)}px" title="${d.sessions} pogovorov"></div>` +
+      `<div class="bar t" style="height:${Math.round(118 * d.tickets / max)}px" title="${d.tickets} zahtevkov"></div>` +
+      `</div><div class="d">${day}</div></div>`;
+  }).join("");
+}
+
+refreshAuth();
+</script>
+</body>
+</html>

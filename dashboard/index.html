@@ -484,15 +484,15 @@ async function loadReqs() {
     d.className = "logRow" + (r.status === "open" ? " user" : "");
     d.innerHTML =
       `<div class="meta">${new Date(r.created_at).toLocaleString()} · ` +
-      `<b>${r.status === "open" ? "OPEN" : "done"}</b></div>` +
+      `<b>${r.status === "resolved" ? "resolved" : r.status.toUpperCase()}</b></div>` +
       `<b>${escapeHtml(r.name || "No name")}</b> — ${escapeHtml(r.contact)}<br>` +
       `${escapeHtml(r.message || "")}` +
-      (r.status === "open"
-        ? ` <button class="btn ghost" style="padding:4px 10px;font-size:12px;margin-top:6px" data-id="${r.id}">Mark done</button>`
+      (r.status !== "resolved"
+        ? ` <button class="btn ghost" style="padding:4px 10px;font-size:12px;margin-top:6px" data-id="${r.id}">Mark resolved</button>`
         : "");
     const btn = d.querySelector("button");
     if (btn) btn.onclick = async () => {
-      await db.from("widget_handoffs").update({ status: "done" }).eq("id", r.id);
+      await db.from("widget_handoffs").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("id", r.id);
       loadReqs();
     };
     box.appendChild(d);
