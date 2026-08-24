@@ -53,7 +53,10 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
     '.head .av img{width:32px;height:32px;object-fit:contain}' +
     '.head .t{font-size:15px;font-weight:700;line-height:1.2}' +
     '.head .s{font-size:12px;opacity:.9;margin-top:2px}' +
-    '.head .x{margin-left:auto;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px;line-height:1}' +
+    '.head .n{margin-left:auto;background:none;border:none;color:#fff;cursor:pointer;padding:4px 6px;display:flex;align-items:center;opacity:.85}' +
+    '.head .n:hover{opacity:1}' +
+    '.head .n svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round}' +
+    '.head .x{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px;line-height:1}' +
     '.body{flex:1;overflow-y:auto;padding:14px;background:#F8FAFC;display:flex;flex-direction:column;gap:8px}' +
     '.msg{max-width:85%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}' +
     '.msg.bot{background:#fff;color:#1F2937;border:1px solid #E5E7EB;border-bottom-left-radius:4px;align-self:flex-start}' +
@@ -108,6 +111,8 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
         : '<div class="av">' + (CFG.avatar || '🦷') + '</div>') +
       '<div><div class="t">' + esc(CFG.title || 'Chat') + '</div>' +
       '<div class="s">' + esc(CFG.subtitle || '') + '</div></div>' +
+      '<button class="n" id="aib-new" title="' + esc(CFG.newChatLabel || 'New chat') + '" aria-label="' + esc(CFG.newChatLabel || 'New chat') + '">' +
+        '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>' +
       '<button class="x" aria-label="Close">×</button>' +
     '</div>' +
     '<div class="body" id="aib-body"></div>' +
@@ -292,6 +297,18 @@ export const WIDGET_JS = `/* AIB Support Widget — embeddable AI chat (c) AInfl
 
   /* ---------- events ---------- */
   panel.querySelector('#aib-human').onclick = openHumanForm;
+  panel.querySelector('#aib-new').onclick = function () {
+    if (busy) return;
+    messages = [];
+    try {
+      sessionStorage.removeItem(STORE_KEY);
+      sessionStorage.removeItem('aib_sid_' + CFG.clientId); // next send gets a fresh session id
+    } catch (e) {}
+    renderAll();
+    input.value = '';
+    autoGrow();
+    input.focus();
+  };
   launcher.onclick = function () {
     open = !open;
     panel.classList.toggle('open', open);

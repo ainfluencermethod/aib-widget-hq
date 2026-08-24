@@ -201,6 +201,7 @@ function fallbackConfig(name: string, website: string): GeneratedConfig {
       humanMsgPh: "How can we help?",
       humanSend: "Send request",
       humanThanks: "Thank you! A real person will contact you as soon as possible.",
+      newChatLabel: "New chat",
     },
     system_prompt:
       `You are the friendly AI support assistant for ${name} (${website}). ` +
@@ -243,7 +244,7 @@ async function generateConfig(name: string, website: string, corpus: string): Pr
           type: "object",
           required: ["title", "subtitle", "avatar", "accent", "accentDark", "greeting", "placeholder",
             "quickReplies", "errorMessage", "powered", "humanLabel", "humanIntro", "humanNamePh",
-            "humanContactPh", "humanMsgPh", "humanSend", "humanThanks"],
+            "humanContactPh", "humanMsgPh", "humanSend", "humanThanks", "newChatLabel"],
           properties: {
             title: { type: "string", description: "Short assistant name in site language, e.g. 'Acme Assistant'" },
             subtitle: { type: "string", description: "Short reassurance line ('we usually reply in seconds')" },
@@ -262,6 +263,7 @@ async function generateConfig(name: string, website: string, corpus: string): Pr
             humanMsgPh: { type: "string", description: "Placeholder 'How can we help?'" },
             humanSend: { type: "string", description: "Button text 'Send request'" },
             humanThanks: { type: "string", description: "Thank-you message incl. the brand's phone if found" },
+            newChatLabel: { type: "string", description: "Tooltip for the new-chat button, like 'New chat', site language" },
           },
         },
         system_prompt: { type: "string", description: "Full system prompt for the support AI, in site language" },
