@@ -61,8 +61,11 @@
     '.head .av{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:20px;flex:0 0 auto;overflow:hidden}' +
     '.head .av.pic{background:#FAF8F3}' +
     '.head .av img{width:32px;height:32px;object-fit:contain}' +
-    '.head .t{font-size:15px;font-weight:700;line-height:1.2}' +
-    '.head .s{font-size:12px;opacity:.9;margin-top:2px}' +
+    '.head .t{font-size:15px;font-weight:700;line-height:1.2;display:flex;align-items:center;gap:5px}' +
+    '.head .t svg{width:16px;height:16px;flex:0 0 auto}' +
+    '.head .s{font-size:12px;opacity:.9;margin-top:2px;display:flex;align-items:center}' +
+    '.ldot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#4ADE80;margin-right:6px;animation:aibP 1.6s infinite}' +
+    '@keyframes aibP{0%,100%{opacity:1}50%{opacity:.35}}' +
     '.head .n{margin-left:auto;background:none;border:none;color:#fff;cursor:pointer;padding:4px 6px;display:flex;align-items:center;opacity:.85}' +
     '.head .n:hover{opacity:1}' +
     '.head .n svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round}' +
@@ -148,6 +151,9 @@
   var input = panel.querySelector('#aib-in');
   var sendBtn = panel.querySelector('#aib-send');
   var badge = launcher.querySelector('#aib-badge');
+  var titleEl = panel.querySelector('.head .t');
+  var subEl = panel.querySelector('.head .s');
+  var humanRow = panel.querySelector('.human');
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -192,7 +198,7 @@
 
   function renderQuick() {
     quick.innerHTML = '';
-    if (messages.length || !CFG.quickReplies) return;
+    if (liveMode || messages.length || !CFG.quickReplies) return;
     CFG.quickReplies.forEach(function (q) {
       var b = document.createElement('button');
       b.textContent = q;
@@ -262,15 +268,39 @@
   }
 
   /* ---------- live takeover ---------- */
+  /* While a human talks, the widget wears the human's identity: the header
+     shows the verified staff name + a live pulse, and the AI extras
+     (quick replies, handoff/history links) step aside. */
+  function setLiveUI(on) {
+    if (on) {
+      titleEl.innerHTML = esc(staffDisplay()) + VERIFIED_SVG;
+      subEl.innerHTML = '<span class="ldot"></span>' + esc(CFG.liveStatus || 'Support is live');
+      humanRow.style.display = 'none';
+      quick.innerHTML = '';
+    } else {
+      titleEl.textContent = CFG.title || 'Chat';
+      subEl.textContent = CFG.subtitle || '';
+      humanRow.style.display = '';
+      renderQuick();
+    }
+  }
+
   function enterLive(agent) {
     if (liveMode) return;
     liveMode = true;
     liveAgent = agent || '';
+    setLiveUI(true);
     var who = CFG.staffName || liveAgent;
     var note = (who ? who + ' ' : '') + (CFG.liveJoined || 'from our team joined the chat.');
     messages.push({ role: 'assistant', content: note });
     persist();
     addBubble('assistant', note);
+  }
+
+  function exitLive() {
+    if (!liveMode) return;
+    liveMode = false;
+    setLiveUI(false);
   }
 
   function sync() {
@@ -280,7 +310,7 @@
       .then(function (data) {
         if (!data) return;
         if (data.live) enterLive(data.agent || '');
-        else liveMode = false;
+        else exitLive();
         var msgs = data.messages || [];
         var added = false;
         msgs.forEach(function (m) {
@@ -374,7 +404,7 @@
         var maxId = 0;
         msgs.forEach(function (m) { if (m.id > maxId) maxId = m.id; });
         lastMsgId = maxId;
-        liveMode = false;
+        exitLive();
         try { sessionStorage.setItem('aib_sid_' + CFG.clientId, sid); } catch (e) {}
         persist();
         persistLast();
@@ -447,7 +477,7 @@
   panel.querySelector('#aib-new').onclick = function () {
     if (busy) return;
     messages = [];
-    liveMode = false;
+    exitLive();
     liveAgent = '';
     lastMsgId = 0;
     try {
