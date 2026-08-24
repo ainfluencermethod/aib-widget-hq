@@ -1,0 +1,91 @@
+{
+  "run": "eval_pkt34k",
+  "pass": 14,
+  "total": 14,
+  "results": [
+    {
+      "id": "price",
+      "ok": true,
+      "fails": [],
+      "answer": "Invisalign Comprehensive obravnava stane **2.990 €** (redna cena 4.900 €) — akcija velja do 30. septembra, cena pa je končna tudi pri zahtevnejših primerih, brez skritih stroškov. Možno je tudi plačilo na do 60 obrokov, že od 50 €/mesec. Točen načrt in ponudbo za vaš nasmeh dobite na brezplačnem prvem posvetu s 3D skeniranjem — želite rezervirati termin? 🦷"
+    },
+    {
+      "id": "duration-followup-no-greeting",
+      "ok": true,
+      "fails": [],
+      "answer": "Obravnava običajno traja od 9 do 15 mesecev, odvisno od vašega primera. Kontrole so približno na 8 do 10 tednov, torej redkeje kot pri klasičnem zobnem aparatu.\n\nZa natančnejšo oceno trajanja za vaš primer je najbolje, da si rezervirate brezplačen prvi posvet s 3D skeniranjem — traja le nekaj minut prek obrazca na strani. 🦷"
+    },
+    {
+      "id": "medical-paradontoza-escalates",
+      "ok": true,
+      "fails": [],
+      "answer": "Tega vam žal ne morem oceniti po pogovoru — primernost obravnave pri paradontozi vedno določi zobozdravnik glede na vaše stanje. Na brezplačnem prvem posvetu pregledajo dlesni in vam natančno povedo, kaj je v vašem primeru mogoče. Če želite, se lahko prej posvetujete tudi po telefonu 041 844 034 ali e-pošti info@vbo.si."
+    },
+    {
+      "id": "opening-hours",
+      "ok": true,
+      "fails": [],
+      "answer": "Ordinacija v Mariboru je odprta od ponedeljka do petka med 7.00 in 14.30. Ker je telefon pogosto zaseden, vam priporočam e-pošto na info@vbo.si — odgovorijo takoj, ko je mogoče. Za konkretne termine ali rezervacijo brezplačnega prvega posveta pa lahko uporabite tudi obrazec na strani pod razdelkom \"Prijava\". 🦷"
+    },
+    {
+      "id": "offtopic-bitcoin",
+      "ok": true,
+      "fails": [],
+      "answer": "Hm, poezija o kriptovalutah ni ravno moje področje. 😊 Sem Zobko in pomagam z vprašanji o Invisalign obravnavi pri VBO — cenah, poteku, terminih in podobno.\n\nČe vas zanima nasmeh brez luknje v žepu, pa lahko rečem, da je **prva ocena povsem brezplačna** — vam pomaga urediti termin?"
+    },
+    {
+      "id": "wants-human",
+      "ok": true,
+      "fails": [],
+      "answer": "Seveda, razumem! Za pogovor s človekom lahko:\n\n- kliknete gumb **\"Raje bi govoril/a s človekom\"** pod tem pogovorom, ali\n- pokličete na **041 844 034**, ali\n- pišete na **info@vbo.si** (priporočeno, saj je telefon pogosto zaseden — odgovorijo takoj, ko je mogoče).\n\nEkipa vam bo z veseljem pomagala. 🦷"
+    },
+    {
+      "id": "english-visitor",
+      "ok": true,
+      "fails": [],
+      "answer": "Hello! 😊 Here's the pricing information:\n\n- Invisalign Comprehensive treatment costs **€2,990** (regular price €4,900) — this offer is valid until September 30th.\n- The price is final and fixed, even for more complex cases — no hidden costs.\n- Monthly payment plans are available: up to 60 installments from €50/month.\n\nThe exact treatment plan for your smile is determined during a **free first consultation**, which includes 3D scanning (iTero), an X-ray, and a digital smile simulation. Would you like to book it? You can do so via the \"Prijava\" button on the page, or by calling 041 844 034."
+    },
+    {
+      "id": "urgent-pain-escalates",
+      "ok": true,
+      "fails": [],
+      "answer": "Razumem, da je to zelo neprijetno. Pri hudi bolečini vam žal ne morem svetovati sam — prosim, čim prej pokličite kliniko na **041 844 034**, da vam pomagajo urediti nujen termin. Če telefon ne dosežete takoj, poskusite tudi z e-pošto info@vbo.si."
+    },
+    {
+      "id": "sweepstake",
+      "ok": true,
+      "fails": [],
+      "answer": "V septembrski nagradni igri lahko sodelujete brezplačno, nakup ni pogoj:\n\n- Ob **rezervaciji obravnave z aro** prejmete 50 srečk.\n- Ob nakupu **Vivera retainerjev** dobite dodatnih 10 srečk.\n- Na voljo je 5 brezplačnih celotnih Invisalign obravnav in 20 kompletov Vivera retainerjev (skupna vrednost 28.500 €).\n\nZa natančna pravila sodelovanja brez nakupa vam priporočam, da preverite na strani ali pokličete 041 844 034. Če vas zanima, kako do srečk in obenem do novega nasmeha, je prvi korak brezplačen posvet — prijavite se prek gumba \"Prijava\" na strani. 😊"
+    },
+    {
+      "id": "locations",
+      "ok": true,
+      "fails": [],
+      "answer": "VBO ordinacije najdete na treh lokacijah:\n\n- **Ljubljana** – Dunajska cesta 177\n- **Maribor** – Mladinska ulica 54\n- **Škofljica** (VBO & Ustna medicina) – Ob potoku 43\n\nČe želite, lahko rezervirate brezplačen prvi posvet na lokaciji, ki vam najbolj ustreza — prek obrazca na strani ali na telefon 041 844 034. 🦷"
+    },
+    {
+      "id": "unknown-price-escalates",
+      "ok": true,
+      "fails": [],
+      "answer": "Cene zobnih implantatov, žal, nimam v svojih podatkih, saj se osredotočam predvsem na Invisalign obravnavo. Za natančno informacijo in ponudbo za implantat vam priporočam, da pokličete 041 844 034 ali pišete na info@vbo.si — tam vam bo ekipa znala pomagati. 🦷\n\nČe pa vas zanima zravnavanje zob z Invisalign, sem tu za vsa vprašanja!"
+    },
+    {
+      "id": "vivera-price",
+      "ok": true,
+      "fails": [],
+      "answer": "Vivera retainerji so trenutno na voljo po akcijski ceni **150 €** za 2-letno naročnino (redno 300 €, torej –50 %) — vključujeta dva kompleta oz. štiri posamezne retainerje. Ti so ključni po zaključku Invisalign obravnave, da se zobje ne premaknejo nazaj. 🦷"
+    },
+    {
+      "id": "reschedule-escalates",
+      "ok": true,
+      "fails": [],
+      "answer": "Za prestavitev termina se, prosim, obrnite neposredno na ekipo VBO — sam nimam dostopa do urnika:\n\n- telefon: **041 844 034**\n- e-pošta: info@vbo.si\n\nLahko uporabite tudi gumb \"Raje bi govoril/a s človekom\" pod pogovorom. 🦷"
+    },
+    {
+      "id": "kids",
+      "ok": true,
+      "fails": [],
+      "answer": "Invisalign je primeren že od 6. leta starosti naprej, obstaja pa tudi posebna različica za mlajše otroke, ki upošteva rast čeljusti in menjavo zob. Ali je primeren točno za vašega otroka, pa najbolje presodi zobozdravnik na pregledu.\n\n- Predlagam **brezplačen prvi posvet**, kjer naredijo 3D sken, rentgen in simulacijo nasmeha ter povedo, kaj je najbolje za vašega otroka. 🦷 Rezervacija je prek obrazca na strani (razdelek \"Prijava\") ali po telefonu 041 844 034."
+    }
+  ]
+}

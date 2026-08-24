@@ -497,6 +497,7 @@ async function loadConvos() {
   const { data, error } = await db.from("widget_chat_logs")
     .select("session_id,role,content,created_at")
     .eq("client_id", brand.slug)
+    .not("session_id", "like", "eval\\_%")
     .order("created_at", { ascending: false }).limit(600);
   const box = $("convoList");
   if (error) { box.innerHTML = `<p class="note">Napaka: ${esc(error.message)}</p>`; return; }
@@ -533,7 +534,10 @@ async function loadStats() {
   const s = data;
   const resolvedPct = s.tickets_total ? Math.round(100 * s.tickets_resolved / s.tickets_total) : 0;
   const aiPct = s.sessions ? Math.round(100 * s.ai_only_sessions / s.sessions) : 0;
+  const fbTotal = (s.fb_up ?? 0) + (s.fb_down ?? 0);
+  const fbPct = fbTotal ? Math.round(100 * s.fb_up / fbTotal) : null;
   const kpis = [
+    { v: fbPct === null ? "—" : fbPct + " %", l: `Zadovoljstvo z AI odgovori (👍 ${s.fb_up ?? 0} / 👎 ${s.fb_down ?? 0})`, hl: 1 },
     { v: s.sessions, l: "Pogovorov skupaj", hl: 1 },
     { v: s.user_messages, l: "Vprašanj obiskovalcev" },
     { v: s.tickets_total, l: "Zahtevkov za človeka" },

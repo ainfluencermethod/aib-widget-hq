@@ -258,6 +258,8 @@ Deno.serve(async (req: Request) => {
     name?: string;
     contact?: string;
     message?: string;
+    vote?: string;
+    answer?: string;
     messages?: { role: string; content: string }[];
   };
   try {
@@ -287,6 +289,25 @@ Deno.serve(async (req: Request) => {
         );
       } catch (_e) { /* best effort */ }
     }
+    return json({ ok: true }, 200, origin);
+  }
+
+  // ---------- answer feedback (thumbs from the widget) ----------
+  if (payload.type === "feedback") {
+    const vote = payload.vote === "up" || payload.vote === "down" ? payload.vote : "";
+    if (!vote) return json({ error: "bad vote" }, 400, origin);
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/widget_feedback`, {
+        method: "POST",
+        headers: { ...svcHeaders, "Prefer": "return=minimal" },
+        body: JSON.stringify({
+          client_id: row.slug,
+          session_id: (payload.session ?? "").slice(0, 100),
+          vote,
+          answer: (payload.answer ?? "").slice(0, 400),
+        }),
+      });
+    } catch (_e) { /* best effort */ }
     return json({ ok: true }, 200, origin);
   }
 

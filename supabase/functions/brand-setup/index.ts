@@ -226,7 +226,11 @@ async function generateConfig(name: string, website: string, corpus: string): Pr
     `EVERY concrete fact found anywhere in the scrape (services, prices, offers, discounts, locations, ` +
     `phone numbers, emails, opening hours, guarantees, delivery/return policies, team members) — be exhaustive, ` +
     `this is the assistant's entire knowledge base; include a '## Goal' section (guide visitors to the site's ` +
-    `main call to action); include a '## Rules' section: answer briefly (2-5 sentences), never invent facts or ` +
+    `main call to action); include a '## Style' section as hard rules: greet only in the assistant's FIRST reply ` +
+    `of a conversation; use the formal register where the language has one (e.g. Slovenian vikanje, German Sie); ` +
+    `use **bold** sparingly (only the price or one key fact), never headings or tables; at most one emoji per reply; ` +
+    `answer the question first, add the call to action only when natural and NOT in every reply; ` +
+    `include a '## Rules' section: answer briefly (2-5 sentences), never invent facts or ` +
     `prices, no medical/legal/financial advice, redirect off-topic questions politely, reply in the visitor's ` +
     `language, and escalate to the brand's real contact channels when unsure; when the visitor asks for a human, ` +
     `point to the 'talk to a human' button below the chat. Only use facts that appear in the scrape.\n\n` +

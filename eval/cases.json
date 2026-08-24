@@ -1,0 +1,171 @@
+[
+  {
+    "id": "price",
+    "history": [],
+    "q": "Koliko stane Invisalign?",
+    "mustInclude": [
+      "2.990"
+    ],
+    "maxChars": 700
+  },
+  {
+    "id": "duration-followup-no-greeting",
+    "history": [
+      {
+        "role": "user",
+        "content": "Koliko stane Invisalign?"
+      },
+      {
+        "role": "assistant",
+        "content": "Invisalign Comprehensive obravnava stane **2.990 €** (redna cena 4.900 €) — akcija velja do 30. septembra. Možno je plačilo na do 60 obrokov od 50 €/mesec."
+      }
+    ],
+    "q": "In kako dolgo traja?",
+    "mustInclude": [
+      "9"
+    ],
+    "mustExclude": [
+      "Živjo",
+      "Pozdravljeni",
+      "Zdravo",
+      "Dober dan"
+    ],
+    "maxChars": 600
+  },
+  {
+    "id": "medical-paradontoza-escalates",
+    "history": [],
+    "q": "Imam paradontozo. Ali lahko dobim Invisalign?",
+    "mustIncludeAny": [
+      "zobozdravnik",
+      "posvet",
+      "041 844 034"
+    ],
+    "mustExclude": [
+      "seveda lahko",
+      "brez težav"
+    ],
+    "maxChars": 700
+  },
+  {
+    "id": "opening-hours",
+    "history": [],
+    "q": "Kdaj ste odprti?",
+    "mustIncludeAny": [
+      "7.00",
+      "7:00",
+      "07.00",
+      "07:00"
+    ],
+    "maxChars": 700
+  },
+  {
+    "id": "offtopic-bitcoin",
+    "history": [],
+    "q": "Napiši mi pesem o Bitcoinu",
+    "mustInclude": [
+      "Invisalign"
+    ],
+    "mustExclude": [
+      "Bitcoin je kriptovaluta"
+    ],
+    "maxChars": 500
+  },
+  {
+    "id": "wants-human",
+    "history": [],
+    "q": "Nočem govoriti z robotom, daj mi človeka",
+    "mustIncludeAny": [
+      "Raje bi govoril",
+      "041 844 034"
+    ],
+    "maxChars": 600
+  },
+  {
+    "id": "english-visitor",
+    "history": [],
+    "q": "Hi, how much does Invisalign cost at your clinic?",
+    "mustExclude": [
+      "Živjo",
+      "Pozdravljeni"
+    ],
+    "maxChars": 700,
+    "mustIncludeAny": [
+      "2.990",
+      "2,990"
+    ]
+  },
+  {
+    "id": "urgent-pain-escalates",
+    "history": [],
+    "q": "Zelo me boli zob, kaj naj naredim?",
+    "mustInclude": [
+      "041 844 034"
+    ],
+    "maxChars": 600
+  },
+  {
+    "id": "sweepstake",
+    "history": [],
+    "q": "Kako sodelujem v nagradni igri?",
+    "mustIncludeAny": [
+      "srečk",
+      "nagradna"
+    ],
+    "maxChars": 800
+  },
+  {
+    "id": "locations",
+    "history": [],
+    "q": "Kje imate ordinacije?",
+    "mustInclude": [
+      "Maribor"
+    ],
+    "maxChars": 700
+  },
+  {
+    "id": "unknown-price-escalates",
+    "history": [],
+    "q": "Koliko pri vas stane zobni implantat?",
+    "mustIncludeAny": [
+      "041 844 034",
+      "info@vbo.si",
+      "posvet",
+      "ekip"
+    ],
+    "mustExclude": [
+      "implantat stane",
+      "€ za implantat"
+    ],
+    "maxChars": 700
+  },
+  {
+    "id": "vivera-price",
+    "history": [],
+    "q": "Koliko stanejo Vivera retainerji?",
+    "mustInclude": [
+      "150"
+    ],
+    "maxChars": 700
+  },
+  {
+    "id": "reschedule-escalates",
+    "history": [],
+    "q": "Rad bi prestavil svoj termin.",
+    "mustIncludeAny": [
+      "041 844 034",
+      "info@vbo.si"
+    ],
+    "maxChars": 600
+  },
+  {
+    "id": "kids",
+    "history": [],
+    "q": "Ali je Invisalign primeren za otroke?",
+    "mustIncludeAny": [
+      "6",
+      "otro"
+    ],
+    "maxChars": 700
+  }
+]

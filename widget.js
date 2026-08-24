@@ -97,6 +97,11 @@
     '.hform .hb{background:' + accent + ';color:#fff;border:none;border-radius:8px;padding:9px 0;font-size:13.5px;font-weight:700;cursor:pointer}' +
     '.hform .hb:disabled{opacity:.5}' +
     '.hform .herr{color:#DC2626;font-size:12px;min-height:0}' +
+    '.fb{display:flex;gap:8px;margin-top:6px}' +
+    '.fb button{border:none;background:none;cursor:pointer;font-size:13px;opacity:.4;padding:0;line-height:1}' +
+    '.fb button:hover{opacity:1}' +
+    '.fb button.sel{opacity:1;transform:scale(1.15)}' +
+    '.fb button:disabled{cursor:default}' +
     '.typing{display:flex;gap:4px;padding:12px 14px;background:#fff;border:1px solid #E5E7EB;border-radius:14px;border-bottom-left-radius:4px;align-self:flex-start}' +
     '.typing span{width:7px;height:7px;border-radius:50%;background:#9CA3AF;animation:aibB 1.2s infinite}' +
     '.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}' +
@@ -161,9 +166,11 @@
     });
   }
 
-  /* linkify plain URLs and tel numbers in bot messages */
+  /* light markdown for bot messages: **bold**, "- " bullets, links */
   function fmt(s) {
     var out = esc(s);
+    out = out.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    out = out.replace(/^- /gm, '• ');
     out = out.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
     return out;
   }
@@ -255,6 +262,7 @@
         messages.push({ role: 'assistant', content: reply });
         persist();
         addBubble('assistant', reply);
+        addFeedback(reply);
       })
       .catch(function () {
         hideTyping();
@@ -265,6 +273,34 @@
         sendBtn.disabled = false;
         input.focus();
       });
+  }
+
+  /* ---------- answer feedback (thumbs on fresh AI answers) ---------- */
+  function addFeedback(answerText) {
+    var d = body.lastElementChild;
+    if (!d || d.className.indexOf('bot') === -1) return;
+    var row = document.createElement('div');
+    row.className = 'fb';
+    row.innerHTML = '<button data-v="up" aria-label="Helpful">👍</button>' +
+                    '<button data-v="down" aria-label="Not helpful">👎</button>';
+    d.appendChild(row);
+    row.querySelectorAll('button').forEach(function (b) {
+      b.onclick = function () {
+        row.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
+        b.className = 'sel';
+        fetch(ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'feedback',
+            client: CFG.clientId,
+            session: sessionId(),
+            vote: b.getAttribute('data-v'),
+            answer: String(answerText).slice(0, 400)
+          })
+        }).catch(function () {});
+      };
+    });
   }
 
   /* ---------- notification sound ---------- */
