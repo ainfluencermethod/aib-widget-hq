@@ -256,23 +256,48 @@
         if (data && data.live) {
           // a human agent has this conversation; their reply arrives via sync()
           enterLive(data.agent || '');
+          unlock();
           return;
         }
         var reply = (data && data.reply) || CFG.errorMessage || 'Sorry, something went wrong.';
-        messages.push({ role: 'assistant', content: reply });
+        // messenger style: one blank-line-separated paragraph = one small bubble
+        var parts = reply.split(/\n\s*\n+/).map(function (p) { return p.trim(); }).filter(Boolean);
+        if (!parts.length) parts = [reply];
+        if (parts.length > 4) parts = parts.slice(0, 3).concat(parts.slice(3).join('\n\n'));
+        parts.forEach(function (p) { messages.push({ role: 'assistant', content: p }); });
         persist();
-        addBubble('assistant', reply);
-        addFeedback(reply);
+        showParts(parts, 0, reply);
       })
       .catch(function () {
         hideTyping();
         if (!liveMode) addBubble('assistant', CFG.errorMessage || 'Sorry, something went wrong.');
-      })
-      .finally(function () {
-        busy = false;
-        sendBtn.disabled = false;
-        input.focus();
+        unlock();
       });
+
+    function unlock() {
+      busy = false;
+      sendBtn.disabled = false;
+      input.focus();
+    }
+
+    function showParts(parts, i, full) {
+      if (i >= parts.length) {
+        addFeedback(full);
+        unlock();
+        return;
+      }
+      addBubble('assistant', parts[i]);
+      if (i + 1 < parts.length) {
+        showTyping();
+        var pause = Math.min(450 + parts[i + 1].length * 9, 1700);
+        setTimeout(function () {
+          hideTyping();
+          showParts(parts, i + 1, full);
+        }, pause);
+      } else {
+        showParts(parts, i + 1, full);
+      }
+    }
   }
 
   /* ---------- answer feedback (thumbs on fresh AI answers) ---------- */

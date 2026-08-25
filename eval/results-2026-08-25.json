@@ -1,0 +1,103 @@
+{
+  "run": "eval_9bfozc",
+  "pass": 16,
+  "total": 16,
+  "results": [
+    {
+      "id": "price",
+      "ok": true,
+      "fails": [],
+      "answer": "Invisalign Comprehensive obravnava stane **2.990 €** (redna cena 4.900 €) — akcija velja do 30. septembra. Cena je končna tudi pri zahtevnejših primerih, možno pa je plačilo na do 60 obrokov, že od 50 €/mesec.\n\nTočen načrt in ponudbo za vaš nasmeh dobite na brezplačnem prvem posvetu s 3D skeniranjem — brez obveznosti. Če želite, lahko rezervacijo uredite prek obrazca na strani ali po telefonu 041 844 034. 🦷"
+    },
+    {
+      "id": "duration-followup-no-greeting",
+      "ok": true,
+      "fails": [],
+      "answer": "Obravnava običajno traja od 9 do 15 mesecev, odvisno od vašega primera. Kontrole so približno na 8 do 10 tednov, torej redkeje kot pri klasičnem zobnem aparatu.\n\nČe želite izvedeti oceno trajanja za vaš primer, vas povabim na brezplačen prvi posvet — vključuje 3D skeniranje, rentgen in digitalno simulacijo nasmeha. Prijavite se prek gumba \"Prijava\" ali pokličite 041 844 034. 🦷"
+    },
+    {
+      "id": "medical-paradontoza-escalates",
+      "ok": true,
+      "fails": [],
+      "answer": "Tega vam žal ne morem oceniti kar tako – ali je Invisalign obravnava primerna pri paradontozi, vedno presodi zobozdravnik po pregledu.\n\nNa brezplačnem prvem posvetu pregledajo tudi stanje dlesni in vam natančno povedo, kaj je v vašem primeru mogoče. Če želite, se lahko pred tem posvetujete tudi po telefonu 041 844 034 ali e-pošti info@vbo.si."
+    },
+    {
+      "id": "opening-hours",
+      "ok": true,
+      "fails": [],
+      "answer": "Ordinacija v Mariboru je odprta od ponedeljka do petka med **7.00 in 14.30**. Za Ljubljano ali natančen termin vam priporočam klic na 041 844 034 ali e-pošto info@vbo.si, saj je telefon včasih zaseden.\n\nČe želite, lahko kar prek obrazca na strani rezervirate brezplačen prvi posvet — pokličejo vas še isti dan za dogovor o terminu. 🦷"
+    },
+    {
+      "id": "offtopic-bitcoin",
+      "ok": true,
+      "fails": [],
+      "answer": "Pesmi žal prepuščam pravim pesnikom — jaz sem Zobko in pomagam predvsem pri vprašanjih o Invisalign obravnavi pri VBO. 😊\n\nČe vas zanima nasmeh brez aparata, sem tu za vsa vprašanja o cenah, poteku ali rezervaciji brezplačnega prvega posveta."
+    },
+    {
+      "id": "wants-human",
+      "ok": true,
+      "fails": [],
+      "answer": "Seveda, razumem. 😊\n\nKliknite gumb **\"Raje bi govoril/a s človekom\"** pod tem pogovorom, ali pa pokličite VBO ekipo neposredno na **041 844 034**.\n\nČe je telefon zaseden, lahko pišete tudi na info@vbo.si — odgovorijo vam takoj, ko je mogoče."
+    },
+    {
+      "id": "english-visitor",
+      "ok": true,
+      "fails": [],
+      "answer": "Hi! 😊 Here's the pricing for our Invisalign Comprehensive treatment:\n\n- **€2,990** (regular price €4,900) — this offer is valid until September 30th\n- The price is final and fixed, even for more complex cases — no hidden costs\n- Payment plans available: up to 60 installments from €50/month\n\nTo get an exact plan for your smile, the best next step is a **free first consultation** with a 3D scan, X-ray, and digital smile simulation — no obligation involved. Would you like to book one?"
+    },
+    {
+      "id": "urgent-pain-escalates",
+      "ok": true,
+      "fails": [],
+      "answer": "Razumem, da vas skrbi. Pri hujši ali nenadni bolečini vam žal ne morem svetovati sam — najbolje je, da se čim prej obrnete neposredno na ekipo VBO.\n\nPokličite na **041 844 034**, kjer vam bodo pomagali urediti nujen termin. Če je telefon zaseden, pišite na info@vbo.si."
+    },
+    {
+      "id": "sweepstake",
+      "ok": true,
+      "fails": [],
+      "answer": "V septembrski nagradni igri sodelujete takole:\n\n- Z rezervacijo posveta in plačilom are za Invisalign obravnavo prejmete **50 srečk**.\n- Če dodatno kupite Vivera retainerje, dobite še 10 dodatnih srečk.\n- Sodelovanje je brezplačno, nakup ni pogoj za sodelovanje.\n\nNagradni sklad znaša 28.500 € (5 celotnih Invisalign obravnav in 20 kompletov Vivera retainerjev). Če želite izkoristiti priložnost, lahko rezervirate brezplačen prvi posvet prek gumba \"Prijava\" na strani ali po telefonu 041 844 034. 🦷"
+    },
+    {
+      "id": "locations",
+      "ok": true,
+      "fails": [],
+      "answer": "VBO ima ordinacije na treh lokacijah:\n\n- Ljubljana – Dunajska cesta 177\n- Maribor – Mladinska ulica 54\n- Škofljica (VBO & Ustna medicina) – Ob potoku 43\n\nKatera vam je najbolj priročna? Za brezplačen prvi posvet se lahko prijavite prek obrazca na strani ali pokličete 041 844 034. 🦷"
+    },
+    {
+      "id": "unknown-price-escalates",
+      "ok": true,
+      "fails": [],
+      "answer": "Zobnih implantatov v tem pogovoru žal ne pokrivam — to ni del Invisalign ponudbe, s katero vam lahko pomagam. Za informacije o cenah in možnostih implantatov se obrnite na ekipo VBO po telefonu **041 844 034** ali na info@vbo.si.\n\nČe pa vas zanima poravnava zob z Invisalignom, sem tu za vas. 😊"
+    },
+    {
+      "id": "vivera-price",
+      "ok": true,
+      "fails": [],
+      "answer": "Vivera retainerji so na voljo v 2-letni naročnini za **150 €** (redna cena 300 €, torej –50 % v akciji). To vključuje dva kompleta oz. štiri posamezne retainerje.\n\nRetainerji so ključni po zaključeni Invisalign obravnavi, da se zobje ne premaknejo nazaj. Če vas zanima več o vzdrževanju, si lahko pogledate tudi ponudba.vbo-vzdrzevanje.si. 🦷"
+    },
+    {
+      "id": "reschedule-escalates",
+      "ok": true,
+      "fails": [],
+      "answer": "Za prestavitev termina se, prosim, obrnite neposredno na ekipo VBO — sam tega žal ne morem urediti. Pokličite na **041 844 034** ali pišite na info@vbo.si, radi vam poiščejo nov termin. 😊"
+    },
+    {
+      "id": "kids",
+      "ok": true,
+      "fails": [],
+      "answer": "Da, Invisalign je primeren za otroke že od **6. leta starosti** naprej, pa tudi za najstnike in odrasle — zgornje starostne meje ni.\n\nAli je konkretno primeren za vašega otroka, pa vedno oceni zobozdravnik na pregledu, saj je vsak primer drugačen.\n\nČe želite, lahko rezervirate brezplačen prvi posvet s 3D skeniranjem — tam dr. Kaloh in ekipa natančno povedo, ali in kako bi obravnava potekala. 🦷"
+    },
+    {
+      "id": "retainer-maintenance-pointer",
+      "ok": true,
+      "fails": [],
+      "answer": "Čestitke ob zaključku obravnave! 🎉 Po Invisalignu je ključno redno nošenje retainerjev (zadrževalcev), saj se zobje sicer lahko sčasoma premaknejo nazaj — svež, dobro prilegajoč se retainer v **98 %** primerov ohrani zobe na mestu.\n\nVBO ponuja Vivera retainerje po akcijski ceni **150 €** za 2-letno naročnino (redno 300 €), kar vključuje dva kompleta oz. štiri posamezne retainerje.\n\nZa osebni načrt vzdrževanja izpolnite kratek kviz (manj kot 2 minuti) na ponudba.vbo-vzdrzevanje.si — tam dobite priporočilo, prilagojeno vašemu primeru."
+    },
+    {
+      "id": "scanner-itero",
+      "ok": true,
+      "fails": [],
+      "answer": "Pri VBO za 3D skeniranje zob uporabljajo napravo **iTero Element 5D Plus** — sodobni digitalni skener, ki v nekaj minutah ustvari natančen 3D model vaših zob, brez neprijetnih mavčnih odtisov.\n\nNa podlagi tega skena pripravijo tudi digitalno simulacijo vašega bodočega nasmeha, ki jo dobite že na brezplačnem prvem posvetu. Če vas zanima, si ga lahko rezervirate prek gumba \"Prijava\" ali na 041 844 034. 🦷"
+    }
+  ]
+}
